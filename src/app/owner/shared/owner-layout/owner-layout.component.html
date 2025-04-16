@@ -1,0 +1,35 @@
+<div class="owner-layout">
+  <!-- Add a class to make the sidebar stand out for debugging -->
+  <app-owner-sidebar class="debug-sidebar"></app-owner-sidebar>
+  
+  <div class="content-wrapper">
+    <div class="top-navbar">
+      <div class="d-flex justify-content-between align-items-center w-100">
+        <div>
+          <h1 class="page-title">{{ pageTitle }}</h1>
+        </div>
+        <div class="user-info">
+          <span>Welcome, {{ userName || 'Owner' }}</span>
+          <i class="fas fa-user-circle ms-2"></i>
+        </div>
+      </div>
+    </div>
+    
+    <main class="main-content">
+      <router-outlet></router-outlet>
+    </main>
+    
+    <footer class="footer">
+      <div class="container-fluid">
+        <div class="row">
+          <div class="col-md-6">
+            <p>&copy; {{ currentYear }} Parking App. All rights reserved.</p>
+          </div>
+          <div class="col-md-6 text-md-end">
+            <p>Version 1.0.0</p>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+</div> 

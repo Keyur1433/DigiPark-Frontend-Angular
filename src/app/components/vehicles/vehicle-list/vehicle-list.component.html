@@ -1,0 +1,158 @@
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <!-- Page header -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="mb-1">My Vehicles</h2>
+          <p class="text-muted">Manage your registered vehicles for parking</p>
+        </div>
+        <button class="btn btn-primary" (click)="openModal(vehicleModal)">
+          <i class="bi bi-plus-lg me-1"></i> Add Vehicle
+        </button>
+      </div>
+
+      <!-- Alert message -->
+      <div *ngIf="showAlert" class="alert alert-{{ alertType }} alert-dismissible fade show" role="alert">
+        {{ alertMessage }}
+        <button type="button" class="btn-close" (click)="showAlert = false"></button>
+      </div>
+
+      <!-- Loading spinner -->
+      <div *ngIf="isLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Loading your vehicles...</p>
+      </div>
+
+      <!-- No vehicles message -->
+      <div *ngIf="!isLoading && vehicles.length === 0" class="card shadow">
+        <div class="card-body text-center py-5">
+          <i class="bi bi-car-front display-1 text-muted mb-3"></i>
+          <h4>No Vehicles Found</h4>
+          <p class="text-muted">You haven't added any vehicles yet.</p>
+          <button class="btn btn-primary mt-2" (click)="openModal(vehicleModal)">
+            <i class="bi bi-plus-lg me-1"></i> Add Your First Vehicle
+          </button>
+        </div>
+      </div>
+
+      <!-- Vehicles grid -->
+      <div *ngIf="!isLoading && vehicles.length > 0" class="row">
+        <div class="col-md-4 mb-4" *ngFor="let vehicle of vehicles">
+          <div class="card shadow h-100">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">{{ vehicle.brand }} {{ vehicle.model }}</h5>
+              <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><button class="dropdown-item" (click)="openModal(vehicleModal, vehicle)"><i class="bi bi-pencil me-2"></i>Edit</button></li>
+                  <li><button class="dropdown-item text-danger" (click)="deleteVehicle(vehicle)"><i class="bi bi-trash me-2"></i>Delete</button></li>
+                </ul>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="vehicle-icon text-center mb-3">
+                <i class="bi bi-car-front display-1 text-primary"></i>
+              </div>
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between">
+                  <strong>Number Plate:</strong> <span>{{ vehicle.number_plate }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                  <strong>Type:</strong> <span>{{ vehicle.type }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                  <strong>Color:</strong> <span>{{ vehicle.color }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vehicle Modal -->
+<ng-template #vehicleModal let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title">{{ currentVehicle.id ? 'Edit Vehicle' : 'Add New Vehicle' }}</h4>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <form>
+      <div class="mb-3">
+        <label for="vehicleType" class="form-label">Vehicle Type</label>
+        <select class="form-select" id="vehicleType" [(ngModel)]="currentVehicle.type" name="type">
+          <option value="">Select Type</option>
+          <option value="Car">Car</option>
+          <option value="SUV">SUV</option>
+          <option value="Truck">Truck</option>
+          <option value="Motorcycle">Motorcycle</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="numberPlate" class="form-label">Number Plate</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="numberPlate" 
+          placeholder="e.g. GJ01AB1234" 
+          [(ngModel)]="currentVehicle.number_plate" 
+          name="number_plate"
+        >
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="brand" class="form-label">Brand</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="brand" 
+            placeholder="e.g. Honda" 
+            [(ngModel)]="currentVehicle.brand" 
+            name="brand"
+          >
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="model" class="form-label">Model</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="model" 
+            placeholder="e.g. City" 
+            [(ngModel)]="currentVehicle.model" 
+            name="model"
+          >
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="color" class="form-label">Color</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="color" 
+          placeholder="e.g. Silver" 
+          [(ngModel)]="currentVehicle.color" 
+          name="color"
+        >
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancel</button>
+    <button 
+      type="button" 
+      class="btn btn-primary" 
+      [disabled]="isSubmitting" 
+      (click)="submitVehicle()"
+    >
+      <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+      {{ currentVehicle.id ? 'Update' : 'Save' }}
+    </button>
+  </div>
+</ng-template> 

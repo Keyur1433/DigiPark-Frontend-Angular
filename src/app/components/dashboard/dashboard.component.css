@@ -1,0 +1,106 @@
+.card {
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  margin-bottom: 1rem;
+}
+
+.card-header {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  border-bottom: none;
+}
+
+.btn-light {
+  transition: all 0.2s ease;
+}
+
+.btn-light:hover {
+  transform: translateY(-2px);
+  background-color: #f8f9fa;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+table th {
+  background-color: #f8f9fa;
+  border-top: none;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.alert-info {
+  background-color: #cff4fc;
+  border-color: #b6effb;
+  color: #055160;
+  border-radius: 8px;
+}
+
+.avatar-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #0d6efd;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  font-weight: 500;
+}
+
+.list-group-item {
+  padding: 12px 20px;
+  border-left: none;
+  border-right: none;
+  transition: background-color 0.2s ease;
+}
+
+.list-group-item:hover {
+  background-color: #f8f9fa;
+}
+
+.nav-tabs .nav-link {
+  padding: 10px 20px;
+  color: #6c757d;
+  font-weight: 500;
+  border: none;
+  transition: color 0.2s ease;
+}
+
+.nav-tabs .nav-link.active {
+  color: #0d6efd;
+  background-color: transparent;
+  border-bottom: 3px solid #0d6efd;
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+  color: #0d6efd;
+  border-bottom: 3px solid #dee2e6;
+}
+
+.badge {
+  padding: 6px 10px;
+}
+
+.card .display-4 {
+  font-size: 2.5rem;
+  opacity: 0.8;
+}
+
+.card .display-4 i {
+  line-height: 1;
+}
+
+.table th, .table td {
+  vertical-align: middle;
+}
+
+.vehicle-icon i {
+  opacity: 0.7;
+} 

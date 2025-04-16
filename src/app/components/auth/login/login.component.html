@@ -1,0 +1,170 @@
+<div class="container">
+  <div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h3 class="mb-0">
+            <span *ngIf="!showForgotPassword && !showOtpForm && !showResetPassword">Login</span>
+            <span *ngIf="showForgotPassword">Forgot Password</span>
+            <span *ngIf="showOtpForm">Verify OTP</span>
+            <span *ngIf="showResetPassword">Reset Password</span>
+          </h3>
+        </div>
+        <div class="card-body">
+          <!-- Success and Error Messages -->
+          <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+          <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+          <!-- Login Form -->
+          <form *ngIf="!showForgotPassword && !showOtpForm && !showResetPassword" [formGroup]="loginForm" (ngSubmit)="onLoginSubmit()">
+            <!-- Contact Number -->
+            <div class="mb-3">
+              <label for="contactNumber" class="form-label">Contact Number</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="contactNumber" 
+                formControlName="contact_number"
+                [ngClass]="{'is-invalid': loginForm.get('contact_number')?.invalid && loginForm.get('contact_number')?.touched}">
+              <div *ngIf="loginForm.get('contact_number')?.invalid && loginForm.get('contact_number')?.touched" class="invalid-feedback">
+                <div *ngIf="loginForm.get('contact_number')?.errors?.['required']">Contact number is required</div>
+                <div *ngIf="loginForm.get('contact_number')?.errors?.['pattern']">Contact number must be a 10-digit number</div>
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <input 
+                type="password" 
+                class="form-control" 
+                id="password" 
+                formControlName="password"
+                [ngClass]="{'is-invalid': loginForm.get('password')?.invalid && loginForm.get('password')?.touched}">
+              <div *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched" class="invalid-feedback">
+                <div *ngIf="loginForm.get('password')?.errors?.['required']">Password is required</div>
+              </div>
+            </div>
+
+            <!-- Forgot Password Link -->
+            <div class="mb-3 text-end">
+              <a href="javascript:void(0)" (click)="showForgotPasswordForm()">Forgot Password?</a>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-grid gap-2 mb-3">
+              <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+                <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Login
+              </button>
+            </div>
+
+            <!-- Register Link -->
+            <div class="text-center">
+              Don't have an account? <a routerLink="/register">Register here</a>
+            </div>
+            
+            <!-- Testing link for direct access to owner dashboard -->
+            <div class="text-center mt-3">
+              <p class="text-muted small">After login, your dashboard URL will include your role and ID (e.g., /owner/123/dashboard or /user/456/dashboard)</p>
+            </div>
+          </form>
+
+          <!-- Forgot Password Form -->
+          <form *ngIf="showForgotPassword" [formGroup]="forgotPasswordForm" (ngSubmit)="onForgotPasswordSubmit()">
+            <div class="mb-3">
+              <label for="forgotContactNumber" class="form-label">Contact Number</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="forgotContactNumber" 
+                formControlName="contact_number"
+                [ngClass]="{'is-invalid': forgotPasswordForm.get('contact_number')?.invalid && forgotPasswordForm.get('contact_number')?.touched}">
+              <div *ngIf="forgotPasswordForm.get('contact_number')?.invalid && forgotPasswordForm.get('contact_number')?.touched" class="invalid-feedback">
+                <div *ngIf="forgotPasswordForm.get('contact_number')?.errors?.['required']">Contact number is required</div>
+                <div *ngIf="forgotPasswordForm.get('contact_number')?.errors?.['pattern']">Contact number must be a 10-digit number</div>
+              </div>
+            </div>
+
+            <!-- Submit and Back Buttons -->
+            <div class="d-flex gap-2 mb-3">
+              <button type="button" class="btn btn-secondary flex-grow-1" (click)="backToLogin()">Back to Login</button>
+              <button type="submit" class="btn btn-primary flex-grow-1" [disabled]="isSubmitting">
+                <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Send OTP
+              </button>
+            </div>
+          </form>
+
+          <!-- OTP Verification Form -->
+          <form *ngIf="showOtpForm" [formGroup]="otpForm" (ngSubmit)="onOtpSubmit()">
+            <div class="mb-3">
+              <label for="otp" class="form-label">Enter OTP sent to your mobile number</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="otp" 
+                formControlName="otp"
+                [ngClass]="{'is-invalid': otpForm.get('otp')?.invalid && otpForm.get('otp')?.touched}">
+              <div *ngIf="otpForm.get('otp')?.invalid && otpForm.get('otp')?.touched" class="invalid-feedback">
+                <div *ngIf="otpForm.get('otp')?.errors?.['required']">OTP is required</div>
+                <div *ngIf="otpForm.get('otp')?.errors?.['pattern']">OTP must be a 6-digit number</div>
+              </div>
+            </div>
+
+            <!-- Submit and Back Buttons -->
+            <div class="d-flex gap-2 mb-3">
+              <button type="button" class="btn btn-secondary flex-grow-1" (click)="backToLogin()">Back to Login</button>
+              <button type="submit" class="btn btn-primary flex-grow-1" [disabled]="isSubmitting">
+                <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Verify OTP
+              </button>
+            </div>
+          </form>
+
+          <!-- Reset Password Form -->
+          <form *ngIf="showResetPassword" [formGroup]="resetPasswordForm" (ngSubmit)="onResetPasswordSubmit()">
+            <!-- New Password -->
+            <div class="mb-3">
+              <label for="newPassword" class="form-label">New Password</label>
+              <input 
+                type="password" 
+                class="form-control" 
+                id="newPassword" 
+                formControlName="password"
+                [ngClass]="{'is-invalid': resetPasswordForm.get('password')?.invalid && resetPasswordForm.get('password')?.touched}">
+              <div *ngIf="resetPasswordForm.get('password')?.invalid && resetPasswordForm.get('password')?.touched" class="invalid-feedback">
+                <div *ngIf="resetPasswordForm.get('password')?.errors?.['required']">Password is required</div>
+                <div *ngIf="resetPasswordForm.get('password')?.errors?.['minlength']">Password must be at least 8 characters</div>
+              </div>
+            </div>
+
+            <!-- Confirm New Password -->
+            <div class="mb-3">
+              <label for="confirmNewPassword" class="form-label">Confirm New Password</label>
+              <input 
+                type="password" 
+                class="form-control" 
+                id="confirmNewPassword" 
+                formControlName="password_confirmation"
+                [ngClass]="{'is-invalid': resetPasswordForm.get('password_confirmation')?.invalid && resetPasswordForm.get('password_confirmation')?.touched}">
+              <div *ngIf="resetPasswordForm.get('password_confirmation')?.invalid && resetPasswordForm.get('password_confirmation')?.touched" class="invalid-feedback">
+                <div *ngIf="resetPasswordForm.get('password_confirmation')?.errors?.['required']">Confirm password is required</div>
+                <div *ngIf="resetPasswordForm.get('password_confirmation')?.errors?.['mismatch']">Passwords do not match</div>
+              </div>
+            </div>
+
+            <!-- Submit and Back Buttons -->
+            <div class="d-flex gap-2 mb-3">
+              <button type="button" class="btn btn-secondary flex-grow-1" (click)="backToLogin()">Back to Login</button>
+              <button type="submit" class="btn btn-primary flex-grow-1" [disabled]="isSubmitting">
+                <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Reset Password
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

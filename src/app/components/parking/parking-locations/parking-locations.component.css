@@ -1,0 +1,172 @@
+.parking-image {
+  height: 180px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.availability-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 5px 10px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: white;
+}
+
+.high-availability {
+  background-color: #28a745;
+}
+
+.medium-availability {
+  background-color: #ffc107;
+  color: #343a40;
+}
+
+.low-availability {
+  background-color: #dc3545;
+}
+
+.rating {
+  font-weight: 500;
+  padding: 5px 10px;
+}
+
+.location-address {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.parking-info {
+  text-align: center;
+  padding: 10px;
+  border-radius: 5px;
+  background-color: #f8f9fa;
+}
+
+.parking-info .label {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 5px;
+}
+
+.parking-info .value {
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feature-tag {
+  background-color: #f0f7ff;
+  color: #0d6efd;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.feature-tag.more {
+  background-color: #e9ecef;
+  color: #6c757d;
+}
+
+.map-container {
+  height: 600px;
+  width: 100%;
+  position: relative;
+}
+
+.map-placeholder {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Location details modal */
+.location-details-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.location-details-container {
+  background-color: white;
+  border-radius: 10px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.location-details-header {
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.location-details-header h3 {
+  margin: 0;
+}
+
+.location-details-body {
+  padding: 20px;
+}
+
+.location-image {
+  height: 300px;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.details-badge {
+  position: static;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .location-details-overlay {
+    padding: 10px;
+  }
+  
+  .location-details-body .row {
+    flex-direction: column;
+  }
+  
+  .location-image {
+    height: 200px;
+  }
+}
+
+/* Fix for ngb-timepicker styling */
+ngb-timepicker .ngb-tp-spacer {
+  width: 0.5rem !important;
+}
+
+ngb-timepicker .ngb-tp-input-container input {
+  width: 2.5rem !important;
+} 

@@ -1,0 +1,242 @@
+<div class="container-fluid mt-4">
+  <!-- Page header -->
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="mb-1">Parking Locations</h2>
+          <p class="text-muted">Find and book parking spaces near you</p>
+        </div>
+        <div class="btn-group" role="group">
+          <button type="button" class="btn" [class.btn-primary]="view === 'grid'" [class.btn-outline-primary]="view !== 'grid'" (click)="toggleView('grid')">
+            <i class="bi bi-grid"></i> Grid
+          </button>
+          <button type="button" class="btn" [class.btn-primary]="view === 'map'" [class.btn-outline-primary]="view !== 'map'" (click)="toggleView('map')">
+            <i class="bi bi-map"></i> Map
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search form -->
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="card shadow">
+        <div class="card-body">
+          <form [formGroup]="searchForm" (ngSubmit)="searchLocations()">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="searchLocation" class="form-label">Location</label>
+                <input type="text" class="form-control" id="searchLocation" placeholder="City, area, or landmark" formControlName="location">
+              </div>
+              <div class="col-md-3">
+                <label for="searchDate" class="form-label">Date</label>
+                <div class="input-group">
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    placeholder="yyyy-mm-dd"
+                    formControlName="date"
+                    ngbDatepicker 
+                    #dp="ngbDatepicker"
+                  >
+                  <button class="btn btn-outline-secondary calendar" (click)="dp.toggle()" type="button">
+                    <i class="bi bi-calendar"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <label for="fromTime" class="form-label">From</label>
+                <ngb-timepicker formControlName="fromTime" [spinners]="false"></ngb-timepicker>
+              </div>
+              <div class="col-md-2">
+                <label for="toTime" class="form-label">To</label>
+                <ngb-timepicker formControlName="toTime" [spinners]="false"></ngb-timepicker>
+              </div>
+              <div class="col-md-1 d-flex align-items-end">
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-primary">Search</button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="resetSearch()">Reset</button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error message -->
+  <div *ngIf="error" class="row mb-4">
+    <div class="col-md-12">
+      <div class="alert alert-danger">
+        {{ error }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading spinner -->
+  <div *ngIf="isLoading" class="row">
+    <div class="col-md-12 text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2 text-muted">Loading parking locations...</p>
+    </div>
+  </div>
+
+  <!-- No results message -->
+  <div *ngIf="!isLoading && filteredLocations.length === 0" class="row">
+    <div class="col-md-12">
+      <div class="card shadow">
+        <div class="card-body text-center py-5">
+          <i class="bi bi-geo-alt display-1 text-muted mb-3"></i>
+          <h4>No Parking Locations Found</h4>
+          <p class="text-muted">Try adjusting your search criteria</p>
+          <button class="btn btn-primary mt-2" (click)="resetSearch()">
+            <i class="bi bi-arrow-repeat me-1"></i> Reset Search
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grid view -->
+  <div *ngIf="!isLoading && filteredLocations.length > 0 && view === 'grid'" class="row">
+    <div class="col-md-4 mb-4" *ngFor="let location of filteredLocations">
+      <div class="card shadow h-100">
+        <div class="card-img-top parking-image" [style.background-image]="'url(' + location.image_url + ')'">
+          <div class="availability-badge" [ngClass]="getAvailabilityClass(location)">
+            {{ getAvailabilityText(location) }}
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="card-title mb-0">{{ location.name }}</h5>
+            <span class="badge bg-light text-dark rating">
+              <i class="bi bi-star-fill text-warning me-1"></i> {{ formatRating(location.rating) }}
+            </span>
+          </div>
+          <p class="card-text location-address">
+            <i class="bi bi-geo-alt me-1"></i> {{ location.address }}, {{ location.city }}
+          </p>
+          <div class="row mb-3">
+            <div class="col-6">
+              <div class="parking-info">
+                <div class="label">Available</div>
+                <div class="value">{{ location.available_spots }}/{{ location.total_spots }}</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="parking-info">
+                <div class="label">Rate/Hour</div>
+                <div class="value">₹{{ location.hourly_rate }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="features mb-3">
+            <span class="feature-tag" *ngFor="let feature of location.features.slice(0, 3)">
+              {{ feature }}
+            </span>
+            <span class="feature-tag more" *ngIf="location.features.length > 3">
+              +{{ location.features.length - 3 }} more
+            </span>
+          </div>
+          <div class="d-flex justify-content-between mt-3">
+            <button class="btn btn-outline-primary" (click)="viewLocationDetails(location)">
+              View Details
+            </button>
+            <button class="btn btn-primary" (click)="bookParking(location)">
+              Book Now
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map view -->
+  <div *ngIf="!isLoading && filteredLocations.length > 0 && view === 'map'" class="row">
+    <div class="col-md-12">
+      <div class="card shadow">
+        <div class="card-body p-0">
+          <div class="map-container">
+            <!-- Replace with actual map implementation -->
+            <div class="map-placeholder text-center py-5">
+              <img src="assets/map-placeholder.png" alt="Map placeholder" class="img-fluid rounded" onerror="this.src='https://via.placeholder.com/1200x600?text=Map+View+Coming+Soon'">
+              <p class="text-muted mt-3">Interactive map with parking locations will be displayed here</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Location details modal -->
+<div *ngIf="showDetails && selectedLocation" class="location-details-overlay">
+  <div class="location-details-container">
+    <div class="location-details-header">
+      <h3>{{ selectedLocation.name }}</h3>
+      <button class="btn-close" (click)="closeDetails()"></button>
+    </div>
+    <div class="location-details-body">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="location-image" [style.background-image]="'url(' + selectedLocation.image_url + ')'"></div>
+        </div>
+        <div class="col-md-6">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="badge bg-light text-dark rating">
+              <i class="bi bi-star-fill text-warning me-1"></i> {{ formatRating(selectedLocation.rating) }}
+            </span>
+            <span class="availability-badge details-badge" [ngClass]="getAvailabilityClass(selectedLocation)">
+              {{ getAvailabilityText(selectedLocation) }}
+            </span>
+          </div>
+          <h5>Address</h5>
+          <p>{{ selectedLocation.address }}, {{ selectedLocation.city }}, {{ selectedLocation.state }}</p>
+          
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <h5>Availability</h5>
+              <p>{{ selectedLocation.available_spots }} out of {{ selectedLocation.total_spots }} spots</p>
+            </div>
+            <div class="col-md-6">
+              <h5>Operating Hours</h5>
+              <p>{{ selectedLocation.opening_time }} - {{ selectedLocation.closing_time }}</p>
+            </div>
+          </div>
+          
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <h5>Hourly Rate</h5>
+              <p>₹{{ selectedLocation.hourly_rate }}</p>
+            </div>
+            <div class="col-md-6">
+              <h5>Daily Rate</h5>
+              <p>₹{{ selectedLocation.daily_rate }}</p>
+            </div>
+          </div>
+          
+          <h5>Description</h5>
+          <p>{{ selectedLocation.description }}</p>
+          
+          <h5>Features</h5>
+          <div class="features mb-4">
+            <span class="feature-tag" *ngFor="let feature of selectedLocation.features">
+              {{ feature }}
+            </span>
+          </div>
+          
+          <div class="d-grid">
+            <button class="btn btn-primary btn-lg" (click)="bookParking(selectedLocation)">
+              Book Now
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

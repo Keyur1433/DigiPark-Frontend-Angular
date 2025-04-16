@@ -1,0 +1,54 @@
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <h2>Parking App</h2>
+    <p>Owner Portal</p>
+  </div>
+  
+  <div class="sidebar-menu">
+    <ul>
+      <li>
+        <a [routerLink]="['/owner', userId, 'dashboard']" routerLinkActive="active">
+          <i class="fas fa-tachometer-alt"></i>
+          <span>Dashboard</span>
+        </a>
+      </li>
+      
+      <li>
+        <a [routerLink]="['/owner', userId, 'parking-locations']" routerLinkActive="active">
+          <i class="fas fa-parking"></i>
+          <span>My Parking Locations</span>
+        </a>
+      </li>
+      
+      <li>
+        <a [routerLink]="['/owner', userId, 'bookings']" routerLinkActive="active">
+          <i class="fas fa-calendar-check"></i>
+          <span>Bookings</span>
+        </a>
+      </li>
+      
+      <li>
+        <a [routerLink]="['/owner', userId, 'reports']" routerLinkActive="active">
+          <i class="fas fa-chart-line"></i>
+          <span>Reports</span>
+        </a>
+      </li>
+      
+      <li class="divider"></li>
+      
+      <li>
+        <a [routerLink]="['/user', userId, 'profile']" routerLinkActive="active">
+          <i class="fas fa-user-circle"></i>
+          <span>My Profile</span>
+        </a>
+      </li>
+      
+      <li>
+        <a href="javascript:void(0)" (click)="logout()">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</div> 
