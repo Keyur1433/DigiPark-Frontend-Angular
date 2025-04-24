@@ -29,6 +29,11 @@ export const OWNER_ROUTES: Routes = [
         title: 'Add Parking Location'
       },
       {
+        path: 'parking-locations/edit/:locationId',
+        loadComponent: () => import('./parking-locations/edit-parking-location/edit-parking-location.component').then(m => m.EditParkingLocationComponent),
+        title: 'Edit Parking Location'
+      },
+      {
         path: 'bookings',
         loadComponent: () => import('./bookings/owner-bookings.component').then(m => m.OwnerBookingsComponent),
         title: 'Booking Management'

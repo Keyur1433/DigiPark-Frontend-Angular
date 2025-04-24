@@ -1,0 +1,284 @@
+<div class="container mt-4">
+  <!-- Add a more prominent "Add Parking Location" button -->
+  <div class="d-flex justify-content-end mb-3">
+    <a [routerLink]="['/owner', userId, 'parking-locations', 'add']" class="btn btn-primary btn-lg">
+      <i class="bi bi-plus-circle-fill me-2"></i> Add New Parking Location
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+      <h2 class="mb-0">My Parking Locations</h2>
+      <a [routerLink]="['/owner', userId, 'parking-locations', 'add']" class="btn btn-light">
+        <i class="bi bi-plus-circle"></i> Add New
+      </a>
+    </div>
+    <div class="card-body">
+      <div *ngIf="isLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading parking locations...</p>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+      <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+
+      <div *ngIf="!isLoading && !errorMessage">
+        <div *ngIf="parkingLocations.length === 0" class="text-center py-5">
+          <p class="mb-3">You don't have any parking locations yet.</p>
+          <a [routerLink]="['/owner', userId, 'parking-locations', 'add']" class="btn btn-primary">
+            Add Your First Parking Location
+          </a>
+        </div>
+
+        <div *ngIf="parkingLocations.length > 0" class="table-responsive">
+          <table class="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Capacity (2W/4W)</th>
+                <th>Rates (₹/hr)</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let location of parkingLocations">
+                <td>{{ location.name }}</td>
+                <td>{{ location.address }}, {{ location.city }}</td>
+                <td>{{ location.two_wheeler_capacity }}/{{ location.four_wheeler_capacity }}</td>
+                <td>
+                  <div class="rate-display">
+                    <span class="vehicle-type">2W:</span> ₹{{ location.two_wheeler_price_per_hour ||
+                    location.two_wheeler_hourly_rate || 0 }}<br>
+                    <span class="vehicle-type">4W:</span> ₹{{ location.four_wheeler_price_per_hour ||
+                    location.four_wheeler_hourly_rate || 0 }}
+                  </div>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="location.is_active ? 'bg-success' : 'bg-danger'">
+                    {{ location.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-info" (click)="viewLocationDetails(location)"
+                      title="View Details">
+                      <i class="bi bi-eye"></i> View
+                    </button>
+                    <button (click)="editLocation(location)" class="btn btn-sm btn-outline-primary"
+                      [disabled]="location.is_active" title="Edit Location">
+                      <i class="bi bi-pencil"></i> Edit
+                    </button>
+                    <button (click)="toggleLocationStatus(location)" class="btn btn-sm"
+                      [ngClass]="location.is_active ? 'btn-outline-danger' : 'btn-outline-success'"
+                      title="{{ location.is_active ? 'Deactivate' : 'Activate' }} Location">
+                      {{ location.is_active ? 'Deactivate' : 'Activate' }}
+                    </button>
+                    <button (click)="deleteLocation(location)" class="btn btn-sm btn-outline-danger"
+                      [disabled]="location.is_active" title="Delete Location">
+                      <i class="bi bi-trash"></i> Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <a [routerLink]="['/owner', userId, 'dashboard']" class="btn btn-secondary">Back to Dashboard</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal for Active Location Edit Attempt -->
+<ng-template #deactivatePromptModal let-modal>
+  <div class="modal-header bg-warning">
+    <h5 class="modal-title">Location is Active</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <p>You cannot edit an active parking location. Please deactivate it first to make changes.</p>
+    <p>This helps avoid confusion for users who are viewing or booking the location.</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancel</button>
+    <button type="button" class="btn btn-danger" (click)="deactivateAndEdit()">Deactivate and Edit</button>
+  </div>
+</ng-template>
+
+<!-- Location Details Modal -->
+<ng-template #locationDetailsModal let-modal>
+  <div class="modal-header bg-primary text-white">
+    <h5 class="modal-title">Location Details</h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <div *ngIf="isLoadingDetails" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2">Loading location details...</p>
+    </div>
+
+    <div *ngIf="!isLoadingDetails && locationDetails">
+      <div class="location-header">
+        <h3>{{ locationDetails.parking_location.name }}</h3>
+        <span class="badge" [ngClass]="locationDetails.parking_location.is_active ? 'bg-success' : 'bg-danger'">
+          {{ locationDetails.parking_location.is_active ? 'Active' : 'Inactive' }}
+        </span>
+      </div>
+
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <h5>Address</h5>
+          <p>{{ locationDetails.parking_location.address }}, {{ locationDetails.parking_location.city }}, {{
+            locationDetails.parking_location.state }}</p>
+
+          <h5>Coordinates</h5>
+          <p>Latitude: {{ locationDetails.parking_location.latitude }}<br>
+            Longitude: {{ locationDetails.parking_location.longitude }}</p>
+        </div>
+        <div class="col-md-6">
+          <h5>Capacity</h5>
+          <div class="d-flex justify-content-between">
+            <div>
+              <strong>Two Wheeler:</strong> {{ locationDetails.parking_location.two_wheeler_capacity }}
+            </div>
+            <div>
+              <strong>Four Wheeler:</strong> {{ locationDetails.parking_location.four_wheeler_capacity }}
+            </div>
+          </div>
+
+          <h5 class="mt-3">Pricing</h5>
+          <div class="d-flex justify-content-between">
+            <div>
+              <strong>Two Wheeler:</strong> ₹{{ locationDetails.parking_location.two_wheeler_price_per_hour ||
+              locationDetails.parking_location.two_wheeler_hourly_rate || 0 }}/hr
+            </div>
+            <div>
+              <strong>Four Wheeler:</strong> ₹{{ locationDetails.parking_location.four_wheeler_price_per_hour ||
+              locationDetails.parking_location.four_wheeler_hourly_rate || 0 }}/hr
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mt-4">
+        <div class="col-12">
+          <h5>Today's Bookings ({{ locationDetails.today_bookings.length }})</h5>
+
+          <div *ngIf="locationDetails.today_bookings.length === 0" class="alert alert-info">
+            No bookings for today.
+          </div>
+
+          <div *ngIf="locationDetails.today_bookings.length > 0" class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Vehicle</th>
+                  <th>Check-in</th>
+                  <th>Check-out</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let booking of locationDetails.today_bookings">
+                  <td>{{ booking.user.first_name }} {{ booking.user.last_name }}</td>
+                  <td>{{ booking.vehicle.number_plate }}</td>
+                  <td>{{ booking.check_in_time | date:'short' }}</td>
+                  <td>{{ booking.check_out_time | date:'short' }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="{
+                            'bg-success': booking.status === 'completed',
+                            'bg-primary': booking.status === 'checked_in',
+                            'bg-warning': booking.status === 'upcoming',
+                            'bg-danger': booking.status === 'cancelled'
+                          }">
+                      {{ booking.status | titlecase }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mt-4">
+        <div class="col-md-4">
+          <div class="card bg-light">
+            <div class="card-body text-center">
+              <h6>Today's Revenue</h6>
+              <h3 class="text-success">₹{{ locationDetails.revenue.today }}</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light">
+            <div class="card-body text-center">
+              <h6>This Week</h6>
+              <h3 class="text-primary">₹{{ locationDetails.revenue.this_week }}</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light">
+            <div class="card-body text-center">
+              <h6>This Month</h6>
+              <h3 class="text-info">₹{{ locationDetails.revenue.this_month }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Close</button>
+  </div>
+</ng-template>
+
+<!-- Delete Confirmation Modal -->
+<ng-template #deleteConfirmModal let-modal>
+  <div class="modal-header bg-danger text-white">
+    <h5 class="modal-title">Confirm Delete Action</h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <p><strong>Are you sure you want to delete the location "{{ selectedLocation?.name }}"?</strong></p>
+    <p>This action cannot be undone. All data associated with this location will be permanently deleted.</p>
+
+    <div class="alert alert-warning mt-3">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <strong>Note:</strong> If the delete functionality is not available, you can deactivate the location to hide it
+      from users.
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancel</button>
+    <button type="button" class="btn btn-warning" (click)="deactivateLocationOnly()">Just Deactivate</button>
+    <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete Permanently</button>
+  </div>
+</ng-template>
+
+<!-- Active Location Warning Modal (for Delete) -->
+<ng-template #activeLocationWarningModal let-modal>
+  <div class="modal-header bg-warning">
+    <h5 class="modal-title">Location is Active</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <p>You cannot delete an active parking location. Please deactivate it first.</p>
+    <p>This helps avoid confusion for users who are viewing or booking the location.</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancel</button>
+    <button type="button" class="btn btn-danger" (click)="deactivateAndDelete()">Deactivate and Delete</button>
+  </div>
+</ng-template>

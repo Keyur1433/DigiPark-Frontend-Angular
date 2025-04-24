@@ -76,23 +76,25 @@ export class LoginComponent {
     this.authService.login(this.loginForm.value).subscribe({
       next: (response) => {
         this.isSubmitting = false;
-        this.successMessage = response.message;
+        this.successMessage = response.message || 'Login successful';
         
-        // Check user role and redirect accordingly
-        setTimeout(() => {
-          if (response.user && response.user.id) {
-            const userId = response.user.id;
-            if (response.user.role === 'owner') {
-              this.router.navigate([`/owner/${userId}/dashboard`]);
+        // Directly handle navigation here (don't use setTimeout)
+        // Check for a redirect URL in sessionStorage
+        const redirectUrl = sessionStorage.getItem('redirectAfterLogin');
+        if (redirectUrl) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          this.router.navigateByUrl(redirectUrl);
+        } else {
+          // Default redirect based on user role
+          const user = this.authService.getCurrentUser();
+          if (user) {
+            if (user.role === 'owner') {
+              this.router.navigate(['/owner', user.id, 'dashboard']);
             } else {
-              this.router.navigate([`/user/${userId}/dashboard`]);
+              this.router.navigate(['/user', user.id, 'dashboard']);
             }
-          } else {
-            // Fallback if ID is not available
-            this.router.navigate(['/login']);
-            this.errorMessage = 'Login successful but user data is incomplete. Please try again.';
           }
-        }, 1000);
+        }
       },
       error: (error) => {
         this.isSubmitting = false;

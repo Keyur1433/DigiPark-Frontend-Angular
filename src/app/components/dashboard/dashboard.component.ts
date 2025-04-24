@@ -157,4 +157,28 @@ export class DashboardComponent implements OnInit {
       }
     });
   }
+  
+  // Multi-strategy navigation method
+  navigateToParkingLocations(): void {
+    console.log('Attempting to navigate to parking locations with multi-strategy approach');
+    
+    // Strategy 1: Try Angular Router with navigateByUrl (more direct than navigate)
+    this.router.navigateByUrl('/parking-locations').then(success => {
+      console.log('Router.navigateByUrl result:', success);
+      
+      if (!success) {
+        // Strategy 2: If router navigation fails, try traditional location change
+        console.log('Falling back to window.location approach');
+        const baseHref = document.querySelector('base')?.getAttribute('href') || '/';
+        const targetUrl = baseHref + 'parking-locations';
+        
+        // Use assign for a complete page reload which can solve hydration/SSR issues
+        window.location.assign(targetUrl);
+      }
+    }).catch(err => {
+      console.error('Navigation error:', err);
+      // Strategy 3: Last resort - direct location change
+      window.location.href = '/parking-locations';
+    });
+  }
 } 

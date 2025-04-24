@@ -8,10 +8,12 @@
           <p class="text-muted">Find and book parking spaces near you</p>
         </div>
         <div class="btn-group" role="group">
-          <button type="button" class="btn" [class.btn-primary]="view === 'grid'" [class.btn-outline-primary]="view !== 'grid'" (click)="toggleView('grid')">
+          <button type="button" class="btn" [class.btn-primary]="view === 'grid'"
+            [class.btn-outline-primary]="view !== 'grid'" (click)="toggleView('grid')">
             <i class="bi bi-grid"></i> Grid
           </button>
-          <button type="button" class="btn" [class.btn-primary]="view === 'map'" [class.btn-outline-primary]="view !== 'map'" (click)="toggleView('map')">
+          <button type="button" class="btn" [class.btn-primary]="view === 'map'"
+            [class.btn-outline-primary]="view !== 'map'" (click)="toggleView('map')">
             <i class="bi bi-map"></i> Map
           </button>
         </div>
@@ -28,19 +30,14 @@
             <div class="row g-3">
               <div class="col-md-4">
                 <label for="searchLocation" class="form-label">Location</label>
-                <input type="text" class="form-control" id="searchLocation" placeholder="City, area, or landmark" formControlName="location">
+                <input type="text" class="form-control" id="searchLocation" placeholder="City, area, or landmark"
+                  formControlName="location">
               </div>
               <div class="col-md-3">
                 <label for="searchDate" class="form-label">Date</label>
                 <div class="input-group">
-                  <input 
-                    type="text" 
-                    class="form-control" 
-                    placeholder="yyyy-mm-dd"
-                    formControlName="date"
-                    ngbDatepicker 
-                    #dp="ngbDatepicker"
-                  >
+                  <input type="text" class="form-control" placeholder="dd-mm-yyyy" formControlName="date" ngbDatepicker
+                    #dp="ngbDatepicker">
                   <button class="btn btn-outline-secondary calendar" (click)="dp.toggle()" type="button">
                     <i class="bi bi-calendar"></i>
                   </button>
@@ -91,56 +88,123 @@
     <div class="col-md-12">
       <div class="card shadow">
         <div class="card-body text-center py-5">
-          <i class="bi bi-geo-alt display-1 text-muted mb-3"></i>
-          <h4>No Parking Locations Found</h4>
-          <p class="text-muted">Try adjusting your search criteria</p>
-          <button class="btn btn-primary mt-2" (click)="resetSearch()">
-            <i class="bi bi-arrow-repeat me-1"></i> Reset Search
-          </button>
+          <i class="bi bi-p-circle display-1 text-muted mb-3"></i>
+          <h4>{{ error || 'No Parking Locations Available' }}</h4>
+          <p class="text-muted">
+            {{ error ? 'Try adjusting your search criteria' : 'Currently, there are no parking locations available in the system.' }}
+          </p>
+          <div class="mt-3">
+            <button *ngIf="error" class="btn btn-primary mt-2" (click)="resetSearch()">
+              <i class="bi bi-arrow-repeat me-1"></i> Reset Search
+            </button>
+            <a *ngIf="!error" class="btn btn-primary mt-2" routerLink="/">
+              <i class="bi bi-house-door me-1"></i> Go to Home
+            </a>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Debug information - can be removed in production -->
+  <!-- <div *ngIf="!isLoading && filteredLocations.length > 0" class="row mb-2">
+    <div class="col-12">
+      <div class="alert alert-info">
+        Showing {{ filteredLocations.length }} parking locations
+      </div>
+    </div>
+  </div> -->
+
   <!-- Grid view -->
-  <div *ngIf="!isLoading && filteredLocations.length > 0 && view === 'grid'" class="row">
-    <div class="col-md-4 mb-4" *ngFor="let location of filteredLocations">
+  <div *ngIf="!isLoading && filteredLocations.length > 0 && view === 'grid'"
+    class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    <div class="col" *ngFor="let location of filteredLocations; let i = index">
       <div class="card shadow h-100">
         <div class="card-img-top parking-image" [style.background-image]="'url(' + location.image_url + ')'">
           <div class="availability-badge" [ngClass]="getAvailabilityClass(location)">
             {{ getAvailabilityText(location) }}
           </div>
         </div>
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5 class="card-title mb-0">{{ location.name }}</h5>
-            <span class="badge bg-light text-dark rating">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <h5 class="card-title mb-0 me-2">{{ location.name || 'Parking Location ' + (i+1) }}</h5>
+            <span class="badge bg-light text-dark rating flex-shrink-0">
               <i class="bi bi-star-fill text-warning me-1"></i> {{ formatRating(location.rating) }}
             </span>
           </div>
           <p class="card-text location-address">
-            <i class="bi bi-geo-alt me-1"></i> {{ location.address }}, {{ location.city }}
+            <i class="bi bi-geo-alt me-1"></i> 
+            {{ location.address || 'No address' }}{{ location.city ? ', ' + location.city : '' }}
           </p>
           <div class="row mb-3">
             <div class="col-6">
               <div class="parking-info">
                 <div class="label">Available</div>
-                <div class="value">{{ location.available_spots }}/{{ location.total_spots }}</div>
+                <div class="value">
+                  <ng-container *ngIf="location.available_spots !== undefined">
+                    {{ location.available_spots }}
+                  </ng-container>
+                  <ng-container *ngIf="location.available_spots === undefined && location.slot_availabilities && location.slot_availabilities.length > 0">
+                    {{ getTotalAvailableSlots(location) }}
+                  </ng-container>
+                  <ng-container *ngIf="location.available_spots === undefined && (!location.slot_availabilities || location.slot_availabilities.length === 0) && 
+                                      location.available_spaces !== undefined">
+                    {{ location.available_spaces }}
+                  </ng-container>
+                  <ng-container *ngIf="location.available_spots === undefined && (!location.slot_availabilities || location.slot_availabilities.length === 0) && 
+                                      location.available_spaces === undefined && location.capacity && location.occupied_spaces !== undefined">
+                    {{ location.capacity - location.occupied_spaces }}
+                  </ng-container>
+                  <ng-container *ngIf="location.available_spots === undefined && (!location.slot_availabilities || location.slot_availabilities.length === 0) && 
+                                      location.available_spaces === undefined && (location.capacity === undefined || location.occupied_spaces === undefined)">
+                    --
+                  </ng-container>
+                </div>
               </div>
             </div>
             <div class="col-6">
               <div class="parking-info">
                 <div class="label">Rate/Hour</div>
-                <div class="value">₹{{ location.hourly_rate }}</div>
+                <div class="value">
+                  <div *ngIf="location.two_wheeler_price_per_hour !== undefined && location.two_wheeler_price_per_hour > 0">
+                    2W: ₹{{ location.two_wheeler_price_per_hour }}
+                  </div>
+                  <div *ngIf="location.four_wheeler_price_per_hour !== undefined && location.four_wheeler_price_per_hour > 0">
+                    4W: ₹{{ location.four_wheeler_price_per_hour }}
+                  </div>
+                  <div *ngIf="(location.two_wheeler_price_per_hour === undefined || location.two_wheeler_price_per_hour <= 0) && 
+                             (location.four_wheeler_price_per_hour === undefined || location.four_wheeler_price_per_hour <= 0) && 
+                             location.hourly_rate">
+                    ₹{{ location.hourly_rate }}
+                  </div>
+                  <div *ngIf="(location.two_wheeler_price_per_hour === undefined || location.two_wheeler_price_per_hour <= 0) && 
+                             (location.four_wheeler_price_per_hour === undefined || location.four_wheeler_price_per_hour <= 0) && 
+                             !location.hourly_rate && location.two_wheeler_hourly_rate">
+                    2W: ₹{{ location.two_wheeler_hourly_rate }}
+                  </div>
+                  <div *ngIf="(location.two_wheeler_price_per_hour === undefined || location.two_wheeler_price_per_hour <= 0) && 
+                             (location.four_wheeler_price_per_hour === undefined || location.four_wheeler_price_per_hour <= 0) && 
+                             !location.hourly_rate && location.four_wheeler_hourly_rate">
+                    4W: ₹{{ location.four_wheeler_hourly_rate }}
+                  </div>
+                  <div *ngIf="(location.two_wheeler_price_per_hour === undefined || location.two_wheeler_price_per_hour <= 0) && 
+                             (location.four_wheeler_price_per_hour === undefined || location.four_wheeler_price_per_hour <= 0) && 
+                             !location.hourly_rate && !location.two_wheeler_hourly_rate && !location.four_wheeler_hourly_rate">
+                    --
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           <div class="features mb-3">
-            <span class="feature-tag" *ngFor="let feature of location.features.slice(0, 3)">
+            <span class="feature-tag" *ngFor="let feature of location.features?.slice(0, 3) || []">
               {{ feature }}
             </span>
-            <span class="feature-tag more" *ngIf="location.features.length > 3">
+            <span class="feature-tag more" *ngIf="location.features && location.features.length > 3">
               +{{ location.features.length - 3 }} more
+            </span>
+            <span class="feature-tag" *ngIf="!location.features || location.features.length === 0">
+              No features listed
             </span>
           </div>
           <div class="d-flex justify-content-between mt-3">
@@ -164,7 +228,7 @@
           <div class="map-container">
             <!-- Replace with actual map implementation -->
             <div class="map-placeholder text-center py-5">
-              <img src="assets/map-placeholder.png" alt="Map placeholder" class="img-fluid rounded" onerror="this.src='https://via.placeholder.com/1200x600?text=Map+View+Coming+Soon'">
+              <img src="assets/images/map-placeholder.svg" alt="Map placeholder" class="img-fluid rounded">
               <p class="text-muted mt-3">Interactive map with parking locations will be displayed here</p>
             </div>
           </div>
@@ -197,7 +261,7 @@
           </div>
           <h5>Address</h5>
           <p>{{ selectedLocation.address }}, {{ selectedLocation.city }}, {{ selectedLocation.state }}</p>
-          
+
           <div class="row mb-4">
             <div class="col-md-6">
               <h5>Availability</h5>
@@ -208,7 +272,7 @@
               <p>{{ selectedLocation.opening_time }} - {{ selectedLocation.closing_time }}</p>
             </div>
           </div>
-          
+
           <div class="row mb-4">
             <div class="col-md-6">
               <h5>Hourly Rate</h5>
@@ -219,17 +283,17 @@
               <p>₹{{ selectedLocation.daily_rate }}</p>
             </div>
           </div>
-          
+
           <h5>Description</h5>
           <p>{{ selectedLocation.description }}</p>
-          
+
           <h5>Features</h5>
           <div class="features mb-4">
             <span class="feature-tag" *ngFor="let feature of selectedLocation.features">
               {{ feature }}
             </span>
           </div>
-          
+
           <div class="d-grid">
             <button class="btn btn-primary btn-lg" (click)="bookParking(selectedLocation)">
               Book Now
@@ -239,4 +303,4 @@
       </div>
     </div>
   </div>
-</div> 
+</div>

@@ -3,6 +3,7 @@ import { authGuardFn } from './guards/auth.guard';
 import { OWNER_ROUTES } from './owner/owner.routes';
 
 export const routes: Routes = [
+  // Public routes first
   {
     path: '',
     redirectTo: 'login',
@@ -18,6 +19,27 @@ export const routes: Routes = [
     loadComponent: () => import('./components/auth/register/register.component').then(m => m.RegisterComponent),
     title: 'Register'
   },
+  
+  // Parking locations - ensure public access first, no guard
+  {
+    path: 'parking-locations',
+    loadComponent: () => import('./components/parking/parking-locations/parking-locations.component').then(m => m.ParkingLocationsComponent),
+    title: 'Parking Locations',
+    runGuardsAndResolvers: 'always'
+  },
+  {
+    path: 'parking-locations/:id',
+    loadComponent: () => import('./components/parking/location-details/location-details.component').then(m => m.LocationDetailsComponent),
+    title: 'Parking Location Details'
+  },
+  {
+    path: 'parking-locations/:id/booking',
+    loadComponent: () => import('./components/parking/parking-booking/parking-booking.component').then(m => m.ParkingBookingComponent),
+    canActivate: [authGuardFn],
+    title: 'Book Parking'
+  },
+  
+  // Protected user routes  
   {
     path: 'user/:id/dashboard',
     canActivate: [authGuardFn],
@@ -36,7 +58,10 @@ export const routes: Routes = [
     loadComponent: () => import('./components/parking/parking-locations/parking-locations.component').then(m => m.ParkingLocationsComponent),
     title: 'Parking Locations'
   },
+  
   ...OWNER_ROUTES,
+  
+  // Fallback route - navigate to login
   {
     path: '**',
     redirectTo: 'login'

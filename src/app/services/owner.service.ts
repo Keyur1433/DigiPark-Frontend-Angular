@@ -47,6 +47,9 @@ export interface ParkingLocation {
   four_wheeler_capacity: number;
   two_wheeler_price_per_hour: number;
   four_wheeler_price_per_hour: number;
+  // Additional possible field names for pricing
+  two_wheeler_hourly_rate?: number;
+  four_wheeler_hourly_rate?: number;
   created_at: string;
   updated_at: string;
 }
@@ -165,5 +168,10 @@ export class OwnerService {
   // Toggle status of a parking location (active/inactive)
   toggleParkingLocationStatus(id: number): Observable<ParkingLocation> {
     return this.http.post<ParkingLocation>(`${this.apiUrl}/parking-locations/${id}/toggle-status`, {});
+  }
+
+  // Delete a parking location
+  deleteParkingLocation(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/parking-locations/${id}`);
   }
 } 

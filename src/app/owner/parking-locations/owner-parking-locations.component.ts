@@ -1,106 +1,38 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute } from '@angular/router';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { OwnerService, ParkingLocation } from '../../services/owner.service';
+import { OwnerService, ParkingLocation, ParkingLocationDetailResponse } from '../../services/owner.service';
+import { NgbModal, NgbModalModule, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-owner-parking-locations',
   standalone: true,
-  imports: [CommonModule, RouterModule],
-  template: `
-    <div class="container mt-4">
-      <div class="card">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-          <h2 class="mb-0">My Parking Locations</h2>
-          <a [routerLink]="['/owner', userId, 'parking-locations', 'add']" class="btn btn-light">
-            <i class="bi bi-plus-circle"></i> Add New
-          </a>
-        </div>
-        <div class="card-body">
-          <div *ngIf="isLoading" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2">Loading parking locations...</p>
-          </div>
-          
-          <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
-          
-          <div *ngIf="!isLoading && !errorMessage">
-            <div *ngIf="parkingLocations.length === 0" class="text-center py-5">
-              <p class="mb-3">You don't have any parking locations yet.</p>
-              <a [routerLink]="['/owner', userId, 'parking-locations', 'add']" class="btn btn-primary">
-                Add Your First Parking Location
-              </a>
-            </div>
-            
-            <div *ngIf="parkingLocations.length > 0" class="table-responsive">
-              <table class="table table-striped table-hover">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Address</th>
-                    <th>Capacity (2W/4W)</th>
-                    <th>Rates (₹/hr)</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let location of parkingLocations">
-                    <td>{{ location.name }}</td>
-                    <td>{{ location.address }}, {{ location.city }}</td>
-                    <td>{{ location.two_wheeler_capacity }}/{{ location.four_wheeler_capacity }}</td>
-                    <td>{{ location.two_wheeler_price_per_hour }}/{{ location.four_wheeler_price_per_hour }}</td>
-                    <td>
-                      <span class="badge" [ngClass]="location.is_active ? 'bg-success' : 'bg-danger'">
-                        {{ location.is_active ? 'Active' : 'Inactive' }}
-                      </span>
-                    </td>
-                    <td>
-                      <div class="d-flex gap-2">
-                        <!-- Edit functionality temporarily disabled until route is fully implemented -->
-                        <button class="btn btn-sm btn-outline-primary" disabled>
-                          Edit
-                        </button>
-                        <button (click)="toggleLocationStatus(location)" 
-                                class="btn btn-sm" 
-                                [ngClass]="location.is_active ? 'btn-outline-danger' : 'btn-outline-success'">
-                          {{ location.is_active ? 'Deactivate' : 'Activate' }}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          
-          <div class="mt-3">
-            <a [routerLink]="['/owner', userId, 'dashboard']" class="btn btn-secondary">Back to Dashboard</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .badge {
-      font-size: 0.9em;
-      padding: 0.5em 0.75em;
-    }
-  `]
+  imports: [CommonModule, RouterModule, NgbModalModule, DatePipe],
+  templateUrl: './owner-parking-locations.component.html',
+  styleUrls: ['./owner-parking-locations.component.css']
 })
 export class OwnerParkingLocationsComponent implements OnInit {
   userId: number | null = null;
   parkingLocations: ParkingLocation[] = [];
   isLoading = true;
   errorMessage = '';
+  successMessage = '';
+  selectedLocation: ParkingLocation | null = null;
+  locationDetails: ParkingLocationDetailResponse | null = null;
+  isLoadingDetails = false;
+  
+  @ViewChild('deactivatePromptModal') deactivatePromptModal: any;
+  @ViewChild('deleteConfirmModal') deleteConfirmModal: any;
+  @ViewChild('locationDetailsModal') locationDetailsModal: any;
+  @ViewChild('activeLocationWarningModal') activeLocationWarningModal: any;
   
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private authService: AuthService,
-    private ownerService: OwnerService
+    private ownerService: OwnerService,
+    private modalService: NgbModal
   ) {}
   
   ngOnInit(): void {
@@ -124,9 +56,35 @@ export class OwnerParkingLocationsComponent implements OnInit {
   
   loadParkingLocations(): void {
     this.isLoading = true;
+    this.errorMessage = '';
+    this.successMessage = '';
+    
     this.ownerService.getParkingLocations().subscribe({
       next: (response) => {
         this.parkingLocations = response.parking_locations;
+        
+        // Check all possible price fields and ensure they're properly set
+        this.parkingLocations = this.parkingLocations.map(location => {
+          // Check different possible property names for pricing
+          const twoWheelerPrice = Number(
+            location.two_wheeler_price_per_hour || 
+            location.two_wheeler_hourly_rate || 
+            0
+          );
+          
+          const fourWheelerPrice = Number(
+            location.four_wheeler_price_per_hour || 
+            location.four_wheeler_hourly_rate || 
+            0
+          );
+          
+          return {
+            ...location,
+            two_wheeler_price_per_hour: twoWheelerPrice,
+            four_wheeler_price_per_hour: fourWheelerPrice
+          };
+        });
+        
         this.isLoading = false;
       },
       error: (error) => {
@@ -147,6 +105,13 @@ export class OwnerParkingLocationsComponent implements OnInit {
         const index = this.parkingLocations.findIndex(loc => loc.id === location.id);
         if (index !== -1) {
           this.parkingLocations[index].is_active = !this.parkingLocations[index].is_active;
+          
+          this.successMessage = `Location "${location.name}" has been ${this.parkingLocations[index].is_active ? 'activated' : 'deactivated'}.`;
+          
+          // Auto-dismiss success message after 3 seconds
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
         }
       },
       error: (error) => {
@@ -157,5 +122,201 @@ export class OwnerParkingLocationsComponent implements OnInit {
         }
       }
     });
+  }
+  
+  editLocation(location: ParkingLocation): void {
+    if (location.is_active) {
+      // If location is active, show warning modal
+      this.selectedLocation = location;
+      this.modalService.open(this.deactivatePromptModal);
+    } else {
+      // If location is inactive, proceed to edit page
+      this.router.navigate(['/owner', this.userId, 'parking-locations', 'edit', location.id]);
+    }
+  }
+  
+  viewLocationDetails(location: ParkingLocation): void {
+    this.selectedLocation = location;
+    this.isLoadingDetails = true;
+    this.locationDetails = null;
+    
+    // Open the modal first so user sees loading indicator
+    const modalRef = this.modalService.open(this.locationDetailsModal, { size: 'lg' });
+    
+    // Load location details
+    this.ownerService.getParkingLocationDetails(location.id).subscribe({
+      next: (details) => {
+        // Get the actual pricing values from our already loaded location object
+        // These values were already fixed in the loadParkingLocations method
+        const actualTwoWheelerPrice = location.two_wheeler_price_per_hour;
+        const actualFourWheelerPrice = location.four_wheeler_price_per_hour;
+        
+        // Ensure we use the actual pricing values for display
+        this.locationDetails = {
+          ...details,
+          parking_location: {
+            ...details.parking_location,
+            two_wheeler_price_per_hour: actualTwoWheelerPrice,
+            four_wheeler_price_per_hour: actualFourWheelerPrice
+          }
+        };
+        this.isLoadingDetails = false;
+      },
+      error: (error) => {
+        this.isLoadingDetails = false;
+        if (error.error && error.error.message) {
+          this.errorMessage = error.error.message;
+        } else {
+          this.errorMessage = 'Failed to load location details. Please try again.';
+        }
+      }
+    });
+  }
+  
+  deleteLocation(location: ParkingLocation): void {
+    if (location.is_active) {
+      // If location is active, show warning modal
+      this.selectedLocation = location;
+      this.modalService.open(this.activeLocationWarningModal);
+    } else {
+      // If location is inactive, show confirmation modal
+      this.selectedLocation = location;
+      this.modalService.open(this.deleteConfirmModal);
+    }
+  }
+  
+  confirmDelete(): void {
+    if (this.selectedLocation) {
+      this.ownerService.deleteParkingLocation(this.selectedLocation.id).subscribe({
+        next: () => {
+          // Store name before filtering out the location
+          const locationName = this.selectedLocation?.name || 'Location';
+          
+          // Remove the location from the array
+          this.parkingLocations = this.parkingLocations.filter(
+            loc => loc.id !== this.selectedLocation?.id
+          );
+          
+          this.successMessage = `Location "${locationName}" has been deleted.`;
+          
+          // Auto-dismiss success message after 3 seconds
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+          
+          // Close any open modals
+          this.modalService.dismissAll();
+        },
+        error: (error: any) => {
+          if (error.error && error.error.message) {
+            this.errorMessage = error.error.message;
+          } else {
+            this.errorMessage = 'Failed to delete location. Please try again.';
+          }
+          this.modalService.dismissAll();
+        }
+      });
+    }
+  }
+  
+  deactivateAndEdit(): void {
+    if (this.selectedLocation) {
+      this.ownerService.toggleParkingLocationStatus(this.selectedLocation.id).subscribe({
+        next: () => {
+          const locationId = this.selectedLocation?.id;
+          
+          // Update location status in the array
+          if (this.selectedLocation) {
+            const index = this.parkingLocations.findIndex(loc => loc.id === this.selectedLocation?.id);
+            if (index !== -1) {
+              this.parkingLocations[index].is_active = false;
+            }
+          }
+          
+          // Close modal
+          this.modalService.dismissAll();
+          
+          // Navigate to edit page
+          if (locationId && this.userId) {
+            this.router.navigate(['/owner', this.userId, 'parking-locations', 'edit', locationId]);
+          }
+        },
+        error: (error) => {
+          this.modalService.dismissAll();
+          if (error.error && error.error.message) {
+            this.errorMessage = error.error.message;
+          } else {
+            this.errorMessage = 'Failed to deactivate location. Please try again.';
+          }
+        }
+      });
+    }
+  }
+  
+  deactivateAndDelete(): void {
+    if (this.selectedLocation) {
+      this.ownerService.toggleParkingLocationStatus(this.selectedLocation.id).subscribe({
+        next: () => {
+          // Update location status in the array
+          if (this.selectedLocation) {
+            const index = this.parkingLocations.findIndex(loc => loc.id === this.selectedLocation?.id);
+            if (index !== -1) {
+              this.parkingLocations[index].is_active = false;
+            }
+            
+            // Close warning modal
+            this.modalService.dismissAll();
+            
+            // Show delete confirmation modal
+            this.modalService.open(this.deleteConfirmModal);
+          }
+        },
+        error: (error) => {
+          this.modalService.dismissAll();
+          if (error.error && error.error.message) {
+            this.errorMessage = error.error.message;
+          } else {
+            this.errorMessage = 'Failed to deactivate location. Please try again.';
+          }
+        }
+      });
+    }
+  }
+  
+  deactivateLocationOnly(): void {
+    if (this.selectedLocation) {
+      this.ownerService.toggleParkingLocationStatus(this.selectedLocation.id).subscribe({
+        next: () => {
+          // Update location status in the array
+          const index = this.parkingLocations.findIndex(loc => loc.id === this.selectedLocation?.id);
+          if (index !== -1) {
+            this.parkingLocations[index].is_active = false;
+            
+            this.successMessage = `Location "${this.parkingLocations[index].name}" has been deactivated.`;
+            
+            // Auto-dismiss success message after 3 seconds
+            setTimeout(() => {
+              this.successMessage = '';
+            }, 3000);
+          }
+          
+          // Close modal
+          this.modalService.dismissAll();
+        },
+        error: (error) => {
+          this.modalService.dismissAll();
+          if (error.error && error.error.message) {
+            this.errorMessage = error.error.message;
+          } else {
+            this.errorMessage = 'Failed to deactivate location. Please try again.';
+          }
+        }
+      });
+    }
+  }
+  
+  formatRating(rating: number): string {
+    // Implementation of formatRating method
+    return ''; // Placeholder return, actual implementation needed
   }
 } 

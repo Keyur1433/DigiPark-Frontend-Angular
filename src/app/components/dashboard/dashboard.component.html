@@ -31,13 +31,13 @@
         </div>
         <div class="card-body p-0">
           <div class="list-group list-group-flush">
-            <a routerLink="/vehicles" class="list-group-item list-group-item-action">
+            <a [routerLink]="['/user', user?.id, 'vehicles']" class="list-group-item list-group-item-action">
               <i class="bi bi-car-front me-2"></i> My Vehicles
             </a>
             <a href="javascript:void(0)" class="list-group-item list-group-item-action">
               <i class="bi bi-ticket-perforated me-2"></i> My Bookings
             </a>
-            <a routerLink="/parking-locations" class="list-group-item list-group-item-action">
+            <a class="list-group-item list-group-item-action" href="/parking-locations">
               <i class="bi bi-geo-alt me-2"></i> Find Parking
             </a>
             <a href="javascript:void(0)" class="list-group-item list-group-item-action">
@@ -238,14 +238,14 @@
                             Use our interactive map and advanced search features to find and book parking spaces near your destination.
                           </p>
                           <div class="d-grid gap-2 col-md-6 mx-auto">
-                            <button class="btn btn-primary btn-lg" routerLink="/parking-locations">
+                            <a class="btn btn-primary btn-lg" href="/parking-locations">
                               <i class="bi bi-search me-2"></i> Find Parking
-                            </button>
+                            </a>
                           </div>
                         </div>
                       </div>
                       <div class="text-center mt-5">
-                        <img src="assets/map-placeholder.png" alt="Map placeholder" class="img-fluid rounded" onerror="this.src='https://via.placeholder.com/800x400?text=Map+View+Coming+Soon'">
+                        <img src="assets/images/map-placeholder.svg" alt="Map placeholder" class="img-fluid rounded">
                         <p class="text-muted mt-3">Find the best parking spots at the best prices</p>
                       </div>
                     </div>

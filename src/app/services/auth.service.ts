@@ -112,4 +112,25 @@ export class AuthService {
     if (!this.isBrowser) return null;
     return localStorage.getItem('token');
   }
+
+  // Handle post-login redirects
+  handlePostLoginRedirect(router: any): void {
+    if (this.isBrowser) {
+      const redirectUrl = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectUrl) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        router.navigateByUrl(redirectUrl);
+      } else {
+        // Default redirect based on user role
+        const user = this.getCurrentUser();
+        if (user) {
+          if (user.role === 'owner') {
+            router.navigate(['/owner', user.id, 'dashboard']);
+          } else {
+            router.navigate(['/dashboard']);
+          }
+        }
+      }
+    }
+  }
 } 

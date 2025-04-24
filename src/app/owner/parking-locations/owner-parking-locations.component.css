@@ -1,0 +1,42 @@
+.badge {
+  font-size: 0.9em;
+  padding: 0.5em 0.75em;
+}
+
+.rate-display {
+  line-height: 1.4;
+}
+
+.vehicle-type {
+  font-weight: 500;
+  color: #6c757d;
+  display: inline-block;
+  width: 30px;
+}
+
+/* Location details styling */
+.location-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.location-header h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+h5 {
+  margin-top: 15px;
+  margin-bottom: 8px;
+  color: #495057;
+  font-weight: 600;
+}
+
+.card .card-body h3 {
+  margin: 10px 0 0 0;
+  font-size: 1.5rem;
+} 
