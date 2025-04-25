@@ -4,6 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { NgbDropdownModule, NgbNavModule } from '@ng-bootstrap/ng-bootstrap';
 import { AuthService, UserProfile } from '../../services/auth.service';
 import { HttpClient } from '@angular/common/http';
+import { VehicleService, Vehicle } from '../../services/vehicle.service';
 
 interface BookingSummary {
   active: number;
@@ -12,19 +13,15 @@ interface BookingSummary {
   upcoming: number;
 }
 
-interface Vehicle {
-  id: number;
-  type: string;
-  number_plate: string;
-  brand: string;
-  model: string;
-  color: string;
-}
-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgbNavModule, NgbDropdownModule],
+  imports: [
+    CommonModule, 
+    RouterModule, 
+    NgbNavModule, 
+    NgbDropdownModule
+  ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -40,7 +37,8 @@ export class DashboardComponent implements OnInit {
   constructor(
     private authService: AuthService,
     private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    private vehicleService: VehicleService
   ) {}
 
   ngOnInit(): void {
@@ -51,6 +49,9 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
+    // Set default active tab
+    this.activeTab = 1;
+
     // Load initial dashboard data
     this.fetchDashboardData();
   }
@@ -58,78 +59,60 @@ export class DashboardComponent implements OnInit {
   fetchDashboardData() {
     this.isLoading = true;
     
-    // In a real application, we would fetch this data from the backend
-    // For now, we'll simulate fetching with a timeout
-    setTimeout(() => {
-      // Simulate data for bookings summary
-      this.bookings = {
-        active: 2,
-        completed: 5,
-        cancelled: 1,
-        upcoming: 3
-      };
-      
-      // Simulate recent bookings
-      this.recentBookings = [
-        {
-          id: 1,
-          location: 'Central Parking Lot',
-          entry_time: new Date(new Date().setHours(new Date().getHours() - 3)),
-          exit_time: null,
-          status: 'active',
-          vehicle: 'GJ01AB1234 (Honda City)',
-          amount: 120
-        },
-        {
-          id: 2,
-          location: 'Mall Parking',
-          entry_time: new Date(new Date().setDate(new Date().getDate() - 1)),
-          exit_time: new Date(new Date().setDate(new Date().getDate() - 1)),
-          status: 'completed',
-          vehicle: 'GJ01XY5678 (Hyundai i20)',
-          amount: 80
-        },
-        {
-          id: 3,
-          location: 'Airport Parking',
-          entry_time: new Date(new Date().setDate(new Date().getDate() + 2)),
-          exit_time: null,
-          status: 'upcoming',
-          vehicle: 'GJ01CD9876 (Toyota Fortuner)',
-          amount: 200
-        }
-      ];
-      
-      // Simulate vehicles
-      this.vehicles = [
-        {
-          id: 1,
-          type: 'Car',
-          number_plate: 'GJ01AB1234',
-          brand: 'Honda',
-          model: 'City',
-          color: 'Silver'
-        },
-        {
-          id: 2,
-          type: 'Car',
-          number_plate: 'GJ01XY5678',
-          brand: 'Hyundai',
-          model: 'i20',
-          color: 'White'
-        },
-        {
-          id: 3,
-          type: 'SUV',
-          number_plate: 'GJ01CD9876',
-          brand: 'Toyota',
-          model: 'Fortuner',
-          color: 'Black'
-        }
-      ];
-      
-      this.isLoading = false;
-    }, 1000);
+    // Fetch real vehicles from API
+    this.vehicleService.getUserVehicles().subscribe({
+      next: (vehicles) => {
+        this.vehicles = vehicles;
+        this.fetchMockBookingData(); // Still using mock data for bookings
+      },
+      error: (error) => {
+        console.error('Failed to load vehicles', error);
+        this.fetchMockBookingData(); // Continue with mock booking data even if vehicles fail
+      }
+    });
+  }
+
+  fetchMockBookingData() {
+    // Simulate data for bookings summary
+    this.bookings = {
+      active: 2,
+      completed: 5,
+      cancelled: 1,
+      upcoming: 3
+    };
+    
+    // Simulate recent bookings
+    this.recentBookings = [
+      {
+        id: 1,
+        location: 'Central Parking Lot',
+        entry_time: new Date(new Date().setHours(new Date().getHours() - 3)),
+        exit_time: null,
+        status: 'active',
+        vehicle: 'GJ01AB1234 (Honda City)',
+        amount: 120
+      },
+      {
+        id: 2,
+        location: 'Mall Parking',
+        entry_time: new Date(new Date().setDate(new Date().getDate() - 1)),
+        exit_time: new Date(new Date().setDate(new Date().getDate() - 1)),
+        status: 'completed',
+        vehicle: 'GJ01XY5678 (Hyundai i20)',
+        amount: 80
+      },
+      {
+        id: 3,
+        location: 'Airport Parking',
+        entry_time: new Date(new Date().setDate(new Date().getDate() + 2)),
+        exit_time: null,
+        status: 'upcoming',
+        vehicle: 'GJ01CD9876 (Toyota Fortuner)',
+        amount: 200
+      }
+    ];
+    
+    this.isLoading = false;
   }
 
   getStatusClass(status: string): string {
@@ -179,6 +162,35 @@ export class DashboardComponent implements OnInit {
       console.error('Navigation error:', err);
       // Strategy 3: Last resort - direct location change
       window.location.href = '/parking-locations';
+    });
+  }
+
+  // Helper method to navigate to vehicles page
+  navigateToVehicles(): void {
+    this.router.navigate(['/user', this.user?.id, 'vehicles']);
+  }
+
+  // Handle tab change
+  onTabChange(tabId: number) {
+    console.log(`Tab changed to: ${tabId}`);
+    this.activeTab = tabId;
+  }
+  
+  // Load only vehicles data
+  loadVehiclesOnly() {
+    this.isLoading = true;
+    console.log('Loading vehicles data...');
+    
+    this.vehicleService.getUserVehicles().subscribe({
+      next: (vehicles) => {
+        this.vehicles = vehicles;
+        console.log(`Loaded ${vehicles.length} vehicles:`, vehicles);
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Failed to load vehicles', error);
+        this.isLoading = false;
+      }
     });
   }
 } 

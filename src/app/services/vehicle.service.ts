@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 
 export interface Vehicle {
   id: number;
@@ -23,7 +23,22 @@ export class VehicleService {
 
   // Get all vehicles for the current user
   getUserVehicles(): Observable<Vehicle[]> {
-    return this.http.get<Vehicle[]>(`${API_URL}/vehicles`).pipe(
+    console.log('Fetching user vehicles...');
+    return this.http.get<any>(`${API_URL}/vehicles`).pipe(
+      map(response => {
+        console.log('API response for vehicles:', response);
+        // If the API returns a 'vehicles' array in the response, use that
+        if (response && response.vehicles) {
+          return response.vehicles;
+        }
+        // Otherwise, if the response itself is an array, return it
+        if (Array.isArray(response)) {
+          return response;
+        }
+        // Fallback to empty array if no valid response format is found
+        console.warn('Unexpected API response format for vehicles', response);
+        return [];
+      }),
       catchError(error => {
         console.error('Error fetching user vehicles', error);
         // Return dummy data in case of error
@@ -45,9 +60,12 @@ export class VehicleService {
 
   // Create a new vehicle
   createVehicle(vehicleData: Omit<Vehicle, 'id'>): Observable<Vehicle> {
+    console.log('Creating vehicle with data:', vehicleData);
     return this.http.post<Vehicle>(`${API_URL}/vehicles`, vehicleData).pipe(
       catchError(error => {
         console.error('Error creating vehicle', error);
+        console.error('Response body:', error.error);
+        console.error('Status:', error.status);
         throw error;
       })
     );
@@ -55,9 +73,12 @@ export class VehicleService {
 
   // Update an existing vehicle
   updateVehicle(id: number, vehicleData: Partial<Vehicle>): Observable<Vehicle> {
+    console.log(`Updating vehicle ${id} with data:`, vehicleData);
     return this.http.put<Vehicle>(`${API_URL}/vehicles/${id}`, vehicleData).pipe(
       catchError(error => {
         console.error(`Error updating vehicle with ID ${id}`, error);
+        console.error('Response body:', error.error);
+        console.error('Status:', error.status);
         throw error;
       })
     );
@@ -78,7 +99,7 @@ export class VehicleService {
     return [
       {
         id: 1,
-        type: 'Car',
+        type: '4-wheeler',
         number_plate: 'GJ01AB1234',
         brand: 'Honda',
         model: 'City',
@@ -86,7 +107,7 @@ export class VehicleService {
       },
       {
         id: 2,
-        type: 'Car',
+        type: '4-wheeler',
         number_plate: 'GJ01XY5678',
         brand: 'Hyundai',
         model: 'i20',
@@ -94,7 +115,7 @@ export class VehicleService {
       },
       {
         id: 3,
-        type: 'SUV',
+        type: '4-wheeler',
         number_plate: 'GJ01CD9876',
         brand: 'Toyota',
         model: 'Fortuner',

@@ -1,0 +1,42 @@
+.hero-section {
+  background-color: #f8f9fa;
+  min-height: 500px;
+  padding-bottom: 2rem;
+}
+
+.feature-icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hero-section {
+    text-align: center;
+    min-height: auto;
+  }
+  
+  .hero-section img {
+    margin-top: 2rem;
+  }
+}
+
+/* Override Bootstrap styles for smooth transitions */
+a.btn {
+  transition: all 0.3s ease;
+}
+
+/* Add a slight hover effect to cards */
+.card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+} 

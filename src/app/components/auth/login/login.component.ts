@@ -78,7 +78,6 @@ export class LoginComponent {
         this.isSubmitting = false;
         this.successMessage = response.message || 'Login successful';
         
-        // Directly handle navigation here (don't use setTimeout)
         // Check for a redirect URL in sessionStorage
         const redirectUrl = sessionStorage.getItem('redirectAfterLogin');
         if (redirectUrl) {
@@ -93,6 +92,9 @@ export class LoginComponent {
             } else {
               this.router.navigate(['/user', user.id, 'dashboard']);
             }
+          } else {
+            // Fallback to home page if user info is not available
+            this.router.navigate(['/']);
           }
         }
       },

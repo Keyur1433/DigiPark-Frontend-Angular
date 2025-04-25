@@ -1,22 +1,25 @@
 import { Routes } from '@angular/router';
 import { authGuardFn } from './guards/auth.guard';
+import { publicGuardFn } from './guards/public.guard';
 import { OWNER_ROUTES } from './owner/owner.routes';
 
 export const routes: Routes = [
   // Public routes first
   {
     path: '',
-    redirectTo: 'login',
-    pathMatch: 'full'
+    loadComponent: () => import('./components/home/home.component').then(m => m.HomeComponent),
+    title: 'Home - Parking App'
   },
   {
     path: 'login',
     loadComponent: () => import('./components/auth/login/login.component').then(m => m.LoginComponent),
+    canActivate: [publicGuardFn],
     title: 'Login'
   },
   {
     path: 'register',
     loadComponent: () => import('./components/auth/register/register.component').then(m => m.RegisterComponent),
+    canActivate: [publicGuardFn],
     title: 'Register'
   },
   
@@ -61,9 +64,9 @@ export const routes: Routes = [
   
   ...OWNER_ROUTES,
   
-  // Fallback route - navigate to login
+  // Fallback route - navigate to home
   {
     path: '**',
-    redirectTo: 'login'
+    redirectTo: ''
   }
 ];

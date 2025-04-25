@@ -118,6 +118,7 @@
                   <i class="bi bi-car-front"></i>
                 </div>
               </div>
+              <button class="btn btn-light btn-sm mt-2 w-100" (click)="navigateToVehicles()">View Details</button>
             </div>
           </div>
         </div>
@@ -126,7 +127,7 @@
       <!-- Main tab content -->
       <div class="card shadow">
         <div class="card-header">
-          <ul ngbNav #nav="ngbNav" [(activeId)]="activeTab" class="nav-tabs">
+          <ul ngbNav #nav="ngbNav" [(activeId)]="activeTab" (navChange)="onTabChange($event.nextId)" class="nav-tabs">
             <li [ngbNavItem]="1">
               <a ngbNavLink>Recent Bookings</a>
               <ng-template ngbNavContent>
@@ -173,54 +174,6 @@
                   </div>
                   <div class="text-center mt-3">
                     <button class="btn btn-outline-primary">View All Bookings</button>
-                  </div>
-                </div>
-              </ng-template>
-            </li>
-            <li [ngbNavItem]="2">
-              <a ngbNavLink>My Vehicles</a>
-              <ng-template ngbNavContent>
-                <div *ngIf="isLoading" class="text-center py-4">
-                  <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                  </div>
-                </div>
-                <div *ngIf="!isLoading" class="pb-3">
-                  <div class="row my-3">
-                    <div class="col-md-12 text-end">
-                      <button class="btn btn-primary">
-                        <i class="bi bi-plus"></i> Add New Vehicle
-                      </button>
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col-md-4 mb-4" *ngFor="let vehicle of vehicles">
-                      <div class="card h-100">
-                        <div class="card-header bg-light">
-                          <h5 class="mb-0">{{ vehicle.brand }} {{ vehicle.model }}</h5>
-                        </div>
-                        <div class="card-body">
-                          <div class="vehicle-icon text-center mb-3">
-                            <i class="bi bi-car-front display-1 text-primary"></i>
-                          </div>
-                          <ul class="list-group list-group-flush">
-                            <li class="list-group-item d-flex justify-content-between">
-                              <strong>Number Plate:</strong> <span>{{ vehicle.number_plate }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                              <strong>Type:</strong> <span>{{ vehicle.type }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                              <strong>Color:</strong> <span>{{ vehicle.color }}</span>
-                            </li>
-                          </ul>
-                        </div>
-                        <div class="card-footer d-flex justify-content-between">
-                          <button class="btn btn-sm btn-outline-primary">Edit</button>
-                          <button class="btn btn-sm btn-outline-danger">Delete</button>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </ng-template>

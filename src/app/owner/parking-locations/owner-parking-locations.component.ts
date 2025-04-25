@@ -1,9 +1,9 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { NgbModal, NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
 import { AuthService } from '../../services/auth.service';
 import { OwnerService, ParkingLocation, ParkingLocationDetailResponse } from '../../services/owner.service';
-import { NgbModal, NgbModalModule, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-owner-parking-locations',
@@ -21,20 +21,20 @@ export class OwnerParkingLocationsComponent implements OnInit {
   selectedLocation: ParkingLocation | null = null;
   locationDetails: ParkingLocationDetailResponse | null = null;
   isLoadingDetails = false;
-  
+
   @ViewChild('deactivatePromptModal') deactivatePromptModal: any;
   @ViewChild('deleteConfirmModal') deleteConfirmModal: any;
   @ViewChild('locationDetailsModal') locationDetailsModal: any;
   @ViewChild('activeLocationWarningModal') activeLocationWarningModal: any;
-  
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private authService: AuthService,
     private ownerService: OwnerService,
     private modalService: NgbModal
-  ) {}
-  
+  ) { }
+
   ngOnInit(): void {
     // Try to get ID from route params first
     this.route.parent?.paramMap.subscribe(params => {
@@ -48,43 +48,43 @@ export class OwnerParkingLocationsComponent implements OnInit {
           this.userId = currentUser.id;
         }
       }
-      
+
       // Load parking locations after getting user ID
       this.loadParkingLocations();
     });
   }
-  
+
   loadParkingLocations(): void {
     this.isLoading = true;
     this.errorMessage = '';
     this.successMessage = '';
-    
+
     this.ownerService.getParkingLocations().subscribe({
       next: (response) => {
         this.parkingLocations = response.parking_locations;
-        
+
         // Check all possible price fields and ensure they're properly set
         this.parkingLocations = this.parkingLocations.map(location => {
           // Check different possible property names for pricing
           const twoWheelerPrice = Number(
-            location.two_wheeler_price_per_hour || 
-            location.two_wheeler_hourly_rate || 
+            location.two_wheeler_price_per_hour ||
+            location.two_wheeler_hourly_rate ||
             0
           );
-          
+
           const fourWheelerPrice = Number(
-            location.four_wheeler_price_per_hour || 
-            location.four_wheeler_hourly_rate || 
+            location.four_wheeler_price_per_hour ||
+            location.four_wheeler_hourly_rate ||
             0
           );
-          
+
           return {
             ...location,
             two_wheeler_price_per_hour: twoWheelerPrice,
             four_wheeler_price_per_hour: fourWheelerPrice
           };
         });
-        
+
         this.isLoading = false;
       },
       error: (error) => {
@@ -97,7 +97,7 @@ export class OwnerParkingLocationsComponent implements OnInit {
       }
     });
   }
-  
+
   toggleLocationStatus(location: ParkingLocation): void {
     this.ownerService.toggleParkingLocationStatus(location.id).subscribe({
       next: (updatedLocation) => {
@@ -105,9 +105,9 @@ export class OwnerParkingLocationsComponent implements OnInit {
         const index = this.parkingLocations.findIndex(loc => loc.id === location.id);
         if (index !== -1) {
           this.parkingLocations[index].is_active = !this.parkingLocations[index].is_active;
-          
+
           this.successMessage = `Location "${location.name}" has been ${this.parkingLocations[index].is_active ? 'activated' : 'deactivated'}.`;
-          
+
           // Auto-dismiss success message after 3 seconds
           setTimeout(() => {
             this.successMessage = '';
@@ -123,7 +123,7 @@ export class OwnerParkingLocationsComponent implements OnInit {
       }
     });
   }
-  
+
   editLocation(location: ParkingLocation): void {
     if (location.is_active) {
       // If location is active, show warning modal
@@ -134,15 +134,15 @@ export class OwnerParkingLocationsComponent implements OnInit {
       this.router.navigate(['/owner', this.userId, 'parking-locations', 'edit', location.id]);
     }
   }
-  
+
   viewLocationDetails(location: ParkingLocation): void {
     this.selectedLocation = location;
     this.isLoadingDetails = true;
     this.locationDetails = null;
-    
+
     // Open the modal first so user sees loading indicator
     const modalRef = this.modalService.open(this.locationDetailsModal, { size: 'lg' });
-    
+
     // Load location details
     this.ownerService.getParkingLocationDetails(location.id).subscribe({
       next: (details) => {
@@ -150,7 +150,7 @@ export class OwnerParkingLocationsComponent implements OnInit {
         // These values were already fixed in the loadParkingLocations method
         const actualTwoWheelerPrice = location.two_wheeler_price_per_hour;
         const actualFourWheelerPrice = location.four_wheeler_price_per_hour;
-        
+
         // Ensure we use the actual pricing values for display
         this.locationDetails = {
           ...details,
@@ -172,7 +172,7 @@ export class OwnerParkingLocationsComponent implements OnInit {
       }
     });
   }
-  
+
   deleteLocation(location: ParkingLocation): void {
     if (location.is_active) {
       // If location is active, show warning modal
@@ -184,26 +184,26 @@ export class OwnerParkingLocationsComponent implements OnInit {
       this.modalService.open(this.deleteConfirmModal);
     }
   }
-  
+
   confirmDelete(): void {
     if (this.selectedLocation) {
       this.ownerService.deleteParkingLocation(this.selectedLocation.id).subscribe({
         next: () => {
           // Store name before filtering out the location
           const locationName = this.selectedLocation?.name || 'Location';
-          
+
           // Remove the location from the array
           this.parkingLocations = this.parkingLocations.filter(
             loc => loc.id !== this.selectedLocation?.id
           );
-          
+
           this.successMessage = `Location "${locationName}" has been deleted.`;
-          
+
           // Auto-dismiss success message after 3 seconds
           setTimeout(() => {
             this.successMessage = '';
           }, 3000);
-          
+
           // Close any open modals
           this.modalService.dismissAll();
         },
@@ -218,13 +218,13 @@ export class OwnerParkingLocationsComponent implements OnInit {
       });
     }
   }
-  
+
   deactivateAndEdit(): void {
     if (this.selectedLocation) {
       this.ownerService.toggleParkingLocationStatus(this.selectedLocation.id).subscribe({
         next: () => {
           const locationId = this.selectedLocation?.id;
-          
+
           // Update location status in the array
           if (this.selectedLocation) {
             const index = this.parkingLocations.findIndex(loc => loc.id === this.selectedLocation?.id);
@@ -232,10 +232,10 @@ export class OwnerParkingLocationsComponent implements OnInit {
               this.parkingLocations[index].is_active = false;
             }
           }
-          
+
           // Close modal
           this.modalService.dismissAll();
-          
+
           // Navigate to edit page
           if (locationId && this.userId) {
             this.router.navigate(['/owner', this.userId, 'parking-locations', 'edit', locationId]);
@@ -252,7 +252,7 @@ export class OwnerParkingLocationsComponent implements OnInit {
       });
     }
   }
-  
+
   deactivateAndDelete(): void {
     if (this.selectedLocation) {
       this.ownerService.toggleParkingLocationStatus(this.selectedLocation.id).subscribe({
@@ -263,10 +263,10 @@ export class OwnerParkingLocationsComponent implements OnInit {
             if (index !== -1) {
               this.parkingLocations[index].is_active = false;
             }
-            
+
             // Close warning modal
             this.modalService.dismissAll();
-            
+
             // Show delete confirmation modal
             this.modalService.open(this.deleteConfirmModal);
           }
@@ -282,7 +282,7 @@ export class OwnerParkingLocationsComponent implements OnInit {
       });
     }
   }
-  
+
   deactivateLocationOnly(): void {
     if (this.selectedLocation) {
       this.ownerService.toggleParkingLocationStatus(this.selectedLocation.id).subscribe({
@@ -291,15 +291,15 @@ export class OwnerParkingLocationsComponent implements OnInit {
           const index = this.parkingLocations.findIndex(loc => loc.id === this.selectedLocation?.id);
           if (index !== -1) {
             this.parkingLocations[index].is_active = false;
-            
+
             this.successMessage = `Location "${this.parkingLocations[index].name}" has been deactivated.`;
-            
+
             // Auto-dismiss success message after 3 seconds
             setTimeout(() => {
               this.successMessage = '';
             }, 3000);
           }
-          
+
           // Close modal
           this.modalService.dismissAll();
         },
@@ -314,7 +314,7 @@ export class OwnerParkingLocationsComponent implements OnInit {
       });
     }
   }
-  
+
   formatRating(rating: number): string {
     // Implementation of formatRating method
     return ''; // Placeholder return, actual implementation needed

@@ -1,18 +1,19 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { NgbModal, NgbModalRef, NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbModal, NgbModalRef, NgbModalModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { VehicleService, Vehicle } from '../../../services/vehicle.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-vehicle-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, NgbModalModule],
+  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, NgbModalModule, NgbDropdownModule],
   templateUrl: './vehicle-list.component.html',
   styleUrls: ['./vehicle-list.component.css']
 })
-export class VehicleListComponent implements OnInit {
+export class VehicleListComponent implements OnInit, OnDestroy, AfterViewInit {
   vehicles: Vehicle[] = [];
   isLoading = true;
   currentVehicle: Partial<Vehicle> = {};
@@ -21,6 +22,7 @@ export class VehicleListComponent implements OnInit {
   alertMessage = '';
   alertType = 'success';
   showAlert = false;
+  private subscriptions: Subscription[] = [];
 
   constructor(
     private vehicleService: VehicleService,
@@ -31,11 +33,31 @@ export class VehicleListComponent implements OnInit {
     this.loadVehicles();
   }
 
+  ngOnDestroy(): void {
+    // Clean up subscriptions to prevent memory leaks
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  ngAfterViewInit(): void {
+    // Make sure the dropdown menu is properly initialized
+    this.initializeDropdowns();
+  }
+
+  // Initialize Bootstrap dropdowns
+  private initializeDropdowns(): void {
+    // This is a check if we're in a browser environment
+    if (typeof document !== 'undefined') {
+      console.log('Initializing dropdowns...');
+      // We're using NgbDropdown instead of Bootstrap's native dropdown
+    }
+  }
+
   loadVehicles() {
     this.isLoading = true;
     
-    this.vehicleService.getUserVehicles().subscribe({
+    const sub = this.vehicleService.getUserVehicles().subscribe({
       next: (vehicles) => {
+        console.log('Loaded vehicles:', vehicles);
         this.vehicles = vehicles;
         this.isLoading = false;
       },
@@ -45,6 +67,8 @@ export class VehicleListComponent implements OnInit {
         this.showAlertMessage('Failed to load vehicles. Please try again.', 'danger');
       }
     });
+    
+    this.subscriptions.push(sub);
   }
 
   openModal(content: any, vehicle?: Vehicle) {
@@ -62,38 +86,50 @@ export class VehicleListComponent implements OnInit {
       return;
     }
     
+    // Log the vehicle data before submission for debugging
+    console.log('Submitting vehicle data:', this.currentVehicle);
+    
     this.isSubmitting = true;
     
     if (this.currentVehicle.id) {
       // Update existing vehicle
-      this.vehicleService.updateVehicle(this.currentVehicle.id, this.currentVehicle).subscribe({
-        next: () => {
-          this.loadVehicles();
+      const sub = this.vehicleService.updateVehicle(this.currentVehicle.id, this.currentVehicle).subscribe({
+        next: (response) => {
+          console.log('Vehicle updated successfully:', response);
           this.isSubmitting = false;
           this.modalRef?.close();
           this.showAlertMessage('Vehicle updated successfully!', 'success');
+          // Reload vehicles after a short delay
+          setTimeout(() => this.loadVehicles(), 300);
         },
         error: (error) => {
           console.error('Failed to update vehicle', error);
           this.isSubmitting = false;
-          this.showAlertMessage('Failed to update vehicle. Please try again.', 'danger');
+          this.showAlertMessage(`Failed to update vehicle: ${error.error?.message || 'Please try again.'}`, 'danger');
         }
       });
+      
+      this.subscriptions.push(sub);
     } else {
       // Add new vehicle
-      this.vehicleService.createVehicle(this.currentVehicle as Omit<Vehicle, 'id'>).subscribe({
-        next: () => {
-          this.loadVehicles();
+      const sub = this.vehicleService.createVehicle(this.currentVehicle as Omit<Vehicle, 'id'>).subscribe({
+        next: (response) => {
+          console.log('Vehicle added successfully:', response);
           this.isSubmitting = false;
           this.modalRef?.close();
           this.showAlertMessage('Vehicle added successfully!', 'success');
+          // Reload vehicles after a short delay
+          setTimeout(() => this.loadVehicles(), 300);
         },
         error: (error) => {
           console.error('Failed to add vehicle', error);
+          console.error('Error details:', error.error);
           this.isSubmitting = false;
-          this.showAlertMessage('Failed to add vehicle. Please try again.', 'danger');
+          this.showAlertMessage(`Failed to add vehicle: ${error.error?.message || 'Please try again.'}`, 'danger');
         }
       });
+      
+      this.subscriptions.push(sub);
     }
   }
 
@@ -101,10 +137,11 @@ export class VehicleListComponent implements OnInit {
     if (confirm(`Are you sure you want to delete ${vehicle.brand} ${vehicle.model}?`)) {
       this.isLoading = true;
       
-      this.vehicleService.deleteVehicle(vehicle.id).subscribe({
+      const sub = this.vehicleService.deleteVehicle(vehicle.id).subscribe({
         next: () => {
-          this.loadVehicles();
           this.showAlertMessage('Vehicle deleted successfully!', 'success');
+          // Reload vehicles after a short delay
+          setTimeout(() => this.loadVehicles(), 300);
         },
         error: (error) => {
           console.error('Failed to delete vehicle', error);
@@ -112,6 +149,8 @@ export class VehicleListComponent implements OnInit {
           this.showAlertMessage('Failed to delete vehicle. Please try again.', 'danger');
         }
       });
+      
+      this.subscriptions.push(sub);
     }
   }
 

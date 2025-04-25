@@ -31,7 +31,7 @@
         <div class="card-body text-center py-5">
           <i class="bi bi-car-front display-1 text-muted mb-3"></i>
           <h4>No Vehicles Found</h4>
-          <p class="text-muted">You haven't added any vehicles yet.</p>
+          <p class="text-muted">Vehicle needed, please add the vehicle before booking the parking.</p>
           <button class="btn btn-primary mt-2" (click)="openModal(vehicleModal)">
             <i class="bi bi-plus-lg me-1"></i> Add Your First Vehicle
           </button>
@@ -39,19 +39,23 @@
       </div>
 
       <!-- Vehicles grid -->
-      <div *ngIf="!isLoading && vehicles.length > 0" class="row">
+      <div *ngIf="!isLoading && vehicles && vehicles.length > 0" class="row">
         <div class="col-md-4 mb-4" *ngFor="let vehicle of vehicles">
           <div class="card shadow h-100">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
               <h5 class="mb-0">{{ vehicle.brand }} {{ vehicle.model }}</h5>
-              <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <div ngbDropdown class="d-inline-block">
+                <button class="btn btn-sm btn-outline-secondary" id="vehicleDropdown_{{vehicle.id}}" ngbDropdownToggle>
                   <i class="bi bi-three-dots-vertical"></i>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                  <li><button class="dropdown-item" (click)="openModal(vehicleModal, vehicle)"><i class="bi bi-pencil me-2"></i>Edit</button></li>
-                  <li><button class="dropdown-item text-danger" (click)="deleteVehicle(vehicle)"><i class="bi bi-trash me-2"></i>Delete</button></li>
-                </ul>
+                <div ngbDropdownMenu [attr.aria-labelledby]="'vehicleDropdown_' + vehicle.id">
+                  <button ngbDropdownItem (click)="openModal(vehicleModal, vehicle)">
+                    <i class="bi bi-pencil me-2"></i>Edit
+                  </button>
+                  <button ngbDropdownItem class="text-danger" (click)="deleteVehicle(vehicle)">
+                    <i class="bi bi-trash me-2"></i>Delete
+                  </button>
+                </div>
               </div>
             </div>
             <div class="card-body">
@@ -89,10 +93,8 @@
         <label for="vehicleType" class="form-label">Vehicle Type</label>
         <select class="form-select" id="vehicleType" [(ngModel)]="currentVehicle.type" name="type">
           <option value="">Select Type</option>
-          <option value="Car">Car</option>
-          <option value="SUV">SUV</option>
-          <option value="Truck">Truck</option>
-          <option value="Motorcycle">Motorcycle</option>
+          <option value="2-wheeler">2-wheeler</option>
+          <option value="4-wheeler">4-wheeler</option>
         </select>
       </div>
       <div class="mb-3">
@@ -105,6 +107,9 @@
           [(ngModel)]="currentVehicle.number_plate" 
           name="number_plate"
         >
+        <small class="form-text text-muted">
+          Format: State code + district code + letters + numbers (e.g., GJ01AB1234)
+        </small>
       </div>
       <div class="row">
         <div class="col-md-6 mb-3">
