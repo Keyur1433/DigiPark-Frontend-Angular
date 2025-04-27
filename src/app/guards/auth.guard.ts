@@ -40,15 +40,14 @@ export const authGuardFn: CanActivateFn = (route: ActivatedRouteSnapshot, state:
   }
   
   const token = localStorage.getItem('token');
+  const userId = authService.getUserId();
   console.log('Token exists:', !!token);
+  console.log('User ID exists:', !!userId);
   
-  if (token) {
-    // Store the user if available
-    const user = authService.getCurrentUser();
-    console.log('User from auth service:', user);
+  if (token && userId) {
     return true;
   }
   
-  console.log('No token found, redirecting to login');
+  console.log('Authentication failed, redirecting to login');
   return router.createUrlTree(['/login']);
 }; 

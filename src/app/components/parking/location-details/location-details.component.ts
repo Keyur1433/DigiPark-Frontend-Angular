@@ -283,16 +283,16 @@ export class LocationDetailsComponent implements OnInit {
   }
 
   bookParking(): void {
-    if (this.isUserAuthenticated) {
+    // Check if user is logged in
+    if (this.authService.isLoggedIn()) {
       // User is logged in, navigate to booking page
       this.router.navigate(['/parking-locations', this.locationId, 'booking']);
     } else {
-      // User is not logged in, show login required message
-      if (confirm('Please login first to book parking. Click OK to go to login page.')) {
-        // Save intended location in session storage for redirect after login
-        sessionStorage.setItem('redirectAfterLogin', `/parking-locations/${this.locationId}/booking`);
-        this.router.navigate(['/login']);
-      }
+      // Not logged in, redirect to login with return URL
+      const redirectUrl = `/parking-locations/${this.locationId}/booking`;
+      this.router.navigate(['/login'], {
+        queryParams: { redirect: redirectUrl }
+      });
     }
   }
 

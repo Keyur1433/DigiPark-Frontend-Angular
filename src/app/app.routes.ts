@@ -37,7 +37,7 @@ export const routes: Routes = [
   },
   {
     path: 'parking-locations/:id/booking',
-    loadComponent: () => import('./components/parking/parking-booking/parking-booking.component').then(m => m.ParkingBookingComponent),
+    loadComponent: () => import('./components/booking/booking.component').then(m => m.BookingComponent),
     canActivate: [authGuardFn],
     title: 'Book Parking'
   },

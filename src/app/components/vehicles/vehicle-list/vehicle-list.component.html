@@ -52,7 +52,7 @@
                   <button ngbDropdownItem (click)="openModal(vehicleModal, vehicle)">
                     <i class="bi bi-pencil me-2"></i>Edit
                   </button>
-                  <button ngbDropdownItem class="text-danger" (click)="deleteVehicle(vehicle)">
+                  <button ngbDropdownItem class="text-danger" (click)="openConfirmDeleteModal(vehicle)">
                     <i class="bi bi-trash me-2"></i>Delete
                   </button>
                 </div>
@@ -88,6 +88,17 @@
     <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
   </div>
   <div class="modal-body">
+    <!-- Alert message inside modal -->
+    <div *ngIf="modalAlertMessage" class="alert alert-{{ modalAlertType }} alert-dismissible fade show mb-3"
+      role="alert">
+      <strong>
+        <i class="bi bi-exclamation-triangle-fill me-1" *ngIf="modalAlertType === 'danger'"></i>
+        <i class="bi bi-check-circle-fill me-1" *ngIf="modalAlertType === 'success'"></i>
+      </strong>
+      {{ modalAlertMessage }}
+      <button type="button" class="btn-close" (click)="modalAlertMessage = null"></button>
+    </div>
+
     <form>
       <div class="mb-3">
         <label for="vehicleType" class="form-label">Vehicle Type</label>
@@ -99,14 +110,8 @@
       </div>
       <div class="mb-3">
         <label for="numberPlate" class="form-label">Number Plate</label>
-        <input 
-          type="text" 
-          class="form-control" 
-          id="numberPlate" 
-          placeholder="e.g. GJ01AB1234" 
-          [(ngModel)]="currentVehicle.number_plate" 
-          name="number_plate"
-        >
+        <input type="text" class="form-control" id="numberPlate" placeholder="e.g. GJ01AB1234"
+          [(ngModel)]="currentVehicle.number_plate" name="number_plate">
         <small class="form-text text-muted">
           Format: State code + district code + letters + numbers (e.g., GJ01AB1234)
         </small>
@@ -114,50 +119,45 @@
       <div class="row">
         <div class="col-md-6 mb-3">
           <label for="brand" class="form-label">Brand</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="brand" 
-            placeholder="e.g. Honda" 
-            [(ngModel)]="currentVehicle.brand" 
-            name="brand"
-          >
+          <input type="text" class="form-control" id="brand" placeholder="e.g. Honda" [(ngModel)]="currentVehicle.brand"
+            name="brand">
         </div>
         <div class="col-md-6 mb-3">
           <label for="model" class="form-label">Model</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="model" 
-            placeholder="e.g. City" 
-            [(ngModel)]="currentVehicle.model" 
-            name="model"
-          >
+          <input type="text" class="form-control" id="model" placeholder="e.g. Nexon" [(ngModel)]="currentVehicle.model"
+            name="model">
         </div>
       </div>
       <div class="mb-3">
         <label for="color" class="form-label">Color</label>
-        <input 
-          type="text" 
-          class="form-control" 
-          id="color" 
-          placeholder="e.g. Silver" 
-          [(ngModel)]="currentVehicle.color" 
-          name="color"
-        >
+        <input type="text" class="form-control" id="color" placeholder="e.g. Silver" [(ngModel)]="currentVehicle.color"
+          name="color">
       </div>
     </form>
   </div>
   <div class="modal-footer">
     <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancel</button>
-    <button 
-      type="button" 
-      class="btn btn-primary" 
-      [disabled]="isSubmitting" 
-      (click)="submitVehicle()"
-    >
+    <button type="button" class="btn btn-primary" [disabled]="isSubmitting" (click)="submitVehicle()">
       <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
       {{ currentVehicle.id ? 'Update' : 'Save' }}
     </button>
   </div>
-</ng-template> 
+</ng-template>
+
+<!-- Delete Confirmation Modal -->
+<ng-template #confirmDeleteModal let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title">Confirm Delete</h4>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <p>Are you sure you want to delete this vehicle?</p>
+    <p class="text-danger"><strong>{{ vehicleToDelete?.brand }} {{ vehicleToDelete?.model }} ({{
+        vehicleToDelete?.number_plate }})</strong></p>
+    <p class="mb-0">This action cannot be undone.</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancel</button>
+    <button type="button" class="btn btn-danger" (click)="modal.close('confirm')">Delete Vehicle</button>
+  </div>
+</ng-template>

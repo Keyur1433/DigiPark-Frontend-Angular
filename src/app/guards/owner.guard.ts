@@ -6,9 +6,9 @@ export const ownerGuardFn: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
   
-  const currentUser = authService.getCurrentUser();
+  const userRole = authService.getUserRole();
   
-  if (currentUser && currentUser.role === 'owner') {
+  if (userRole === 'owner') {
     return true;
   }
   

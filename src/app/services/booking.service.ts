@@ -1,89 +1,107 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError, of } from 'rxjs';
+import { catchError, tap, retry, map } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
+import { Booking } from '../models/booking.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class BookingService {
-  private apiUrl = 'http://localhost:8000/api';
+  private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    console.log('BookingService initialized with API URL:', this.apiUrl);
+  }
 
-  /**
-   * Get user bookings
-   */
+  createBooking(bookingData: {
+    parking_location_id: string;
+    vehicle_id: string;
+    duration_hours: number;
+  }): Observable<any> {
+    console.log('Creating booking with data:', bookingData);
+    return this.http.post<any>(`${this.apiUrl}/bookings/check-in`, bookingData)
+      .pipe(
+        tap(response => console.log('Booking created successfully:', response)),
+        catchError(this.handleError('createBooking'))
+      );
+  }
+
   getUserBookings(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/bookings`).pipe(
-      catchError(error => {
-        console.error('Error getting user bookings:', error);
-        // Return mock data on error
-        return of([
-          { 
-            id: 1, 
-            parking_location_name: 'Downtown Parking', 
-            start_time: '2023-07-15T09:00:00', 
-            end_time: '2023-07-15T17:00:00',
-            status: 'active',
-            amount: 35
-          },
-          { 
-            id: 2, 
-            parking_location_name: 'East Side Garage', 
-            start_time: '2023-07-14T08:30:00', 
-            end_time: '2023-07-14T14:30:00',
-            status: 'completed',
-            amount: 24
-          },
-          { 
-            id: 3, 
-            parking_location_name: 'North Station Lot', 
-            start_time: '2023-07-14T12:00:00', 
-            end_time: '2023-07-15T12:00:00',
-            status: 'active',
-            amount: 48
+    console.log('Fetching user bookings from API');
+    return this.http.get<any>(`${this.apiUrl}/bookings`)
+      .pipe(
+        map(response => {
+          // Handle different response formats (array or object with bookings property)
+          if (Array.isArray(response)) {
+            console.log(`Got ${response.length} bookings directly`);
+            return response;
+          } else if (response && response.bookings && Array.isArray(response.bookings)) {
+            console.log(`Got ${response.bookings.length} bookings from response.bookings`);
+            return response.bookings;
+          } else {
+            console.log('Unexpected booking response format:', response);
+            return [];
           }
-        ]);
-      })
-    );
+        }),
+        tap(bookings => {
+          console.log(`Retrieved ${bookings.length} bookings for user`);
+          if (bookings.length > 0) {
+            console.log('First booking sample:', bookings[0]);
+          }
+        }),
+        retry(1),
+        catchError(this.handleError('getUserBookings', []))
+      );
+  }
+
+  getBookingDetails(bookingId: string): Observable<any> {
+    console.log(`Fetching details for booking ${bookingId}`);
+    return this.http.get<any>(`${this.apiUrl}/bookings/${bookingId}`)
+      .pipe(
+        tap(booking => console.log('Booking details retrieved:', booking)),
+        catchError(this.handleError(`getBookingDetails id=${bookingId}`))
+      );
+  }
+
+  cancelBooking(bookingId: string): Observable<any> {
+    console.log(`Cancelling booking ${bookingId}`);
+    return this.http.post<any>(`${this.apiUrl}/bookings/${bookingId}/cancel`, {})
+      .pipe(
+        tap(response => console.log('Booking cancelled successfully:', response)),
+        catchError(this.handleError(`cancelBooking id=${bookingId}`))
+      );
+  }
+
+  checkOutBooking(bookingId: string): Observable<any> {
+    console.log(`Checking out booking ${bookingId}`);
+    return this.http.post<any>(`${this.apiUrl}/bookings/${bookingId}/check-out`, {})
+      .pipe(
+        tap(response => console.log('Booking checked out successfully:', response)),
+        catchError(this.handleError(`checkOutBooking id=${bookingId}`))
+      );
   }
 
   /**
-   * Get booking details
+   * Handle Http operation failures
    */
-  getBookingDetails(bookingId: number): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/bookings/${bookingId}`).pipe(
-      catchError(error => {
-        console.error('Error getting booking details:', error);
-        // Return mock data on error
-        return of({
-          id: bookingId,
-          parking_location_name: 'Downtown Parking',
-          start_time: '2023-07-15T09:00:00',
-          end_time: '2023-07-15T17:00:00',
-          status: 'active',
-          amount: 35,
-          vehicle: {
-            number_plate: 'GJ01AB1234',
-            type: 'Car',
-            brand: 'Honda',
-            model: 'City'
-          }
-        });
-      })
-    );
-  }
+  private handleError<T>(operation = 'operation', result?: T) {
+    return (error: HttpErrorResponse): Observable<T> => {
+      console.error(`${operation} failed:`, error);
 
-  /**
-   * Cancel a booking
-   */
-  cancelBooking(bookingId: number): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/bookings/${bookingId}/cancel`, {}).pipe(
-      catchError(error => {
-        console.error('Error canceling booking:', error);
-        return of({ success: false, message: 'Failed to cancel booking' });
-      })
-    );
+      if (error.error instanceof ErrorEvent) {
+        // A client-side or network error occurred
+        console.error(`Client error in ${operation}:`, error.error.message);
+      } else {
+        // The backend returned an unsuccessful response code
+        console.error(
+          `Backend returned code ${error.status} in ${operation}, ` +
+          `body was:`, error.error);
+      }
+
+      // Let the app keep running by returning an empty result
+      return of(result as T);
+    };
   }
 } 

@@ -1,0 +1,173 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+      <!-- Page header -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="mb-1">Book Parking</h2>
+          <p class="text-muted" *ngIf="parkingLocation">
+            {{ parkingLocation.name }}
+          </p>
+        </div>
+        <button class="btn btn-outline-secondary" routerLink="/parking-locations">
+          <i class="bi bi-arrow-left me-1"></i> Back to Locations
+        </button>
+      </div>
+
+      <!-- Error message -->
+      <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+        {{ errorMessage }}
+        <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+      </div>
+
+      <!-- Success message -->
+      <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        {{ successMessage }}
+        <button type="button" class="btn-close" (click)="successMessage = null"></button>
+      </div>
+
+      <!-- Loading state -->
+      <div *ngIf="isLoading" class="card shadow">
+        <div class="card-body text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-3 text-muted">Loading your vehicles...</p>
+        </div>
+      </div>
+
+      <!-- No vehicles message -->
+      <div *ngIf="!isLoading && vehicles.length === 0" class="card shadow">
+        <div class="card-body text-center py-5">
+          <i class="bi bi-car-front display-1 text-muted mb-3"></i>
+          <h4>No Vehicles Found</h4>
+          <p class="text-muted">You need to add a vehicle before booking parking.</p>
+          <button class="btn btn-primary mt-2" (click)="goToAddVehicle()">
+            <i class="bi bi-plus-lg me-1"></i> Add Vehicle
+          </button>
+        </div>
+      </div>
+
+      <!-- Booking form -->
+      <div *ngIf="!isLoading && vehicles.length > 0" class="card shadow">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Booking Details</h5>
+        </div>
+        <div class="card-body">
+          <form (ngSubmit)="bookParking()">
+            <!-- Vehicle selection -->
+            <div class="mb-4">
+              <label for="vehicleSelect" class="form-label">Select Vehicle</label>
+              <select 
+                class="form-select" 
+                id="vehicleSelect" 
+                [(ngModel)]="selectedVehicleId" 
+                name="vehicle"
+                required
+                (ngModelChange)="onVehicleSelectionChange()"
+              >
+                <option [ngValue]="null">Choose a vehicle</option>
+                <option *ngFor="let vehicle of vehicles" [value]="vehicle.id">
+                  {{ vehicle.brand }} {{ vehicle.model }} ({{ vehicle.number_plate }})
+                </option>
+              </select>
+              <div class="form-text">Select one of your registered vehicles for parking.</div>
+            </div>
+
+            <!-- Duration selection -->
+            <div class="mb-4">
+              <label for="durationSelect" class="form-label">Parking Duration (hours)</label>
+              <select 
+                class="form-select" 
+                id="durationSelect" 
+                [(ngModel)]="durationHours" 
+                name="duration"
+                required
+                (ngModelChange)="onDurationChange()"
+              >
+                <option [ngValue]="0.5">30 minutes</option>
+                <option [ngValue]="1">1 hour</option>
+                <option [ngValue]="1.5">1.5 hours</option>
+                <option [ngValue]="2">2 hours</option>
+                <option [ngValue]="2.5">2.5 hours</option>
+                <option [ngValue]="3">3 hours</option>
+                <option [ngValue]="3.5">3.5 hours</option>
+                <option [ngValue]="4">4 hours</option>
+                <option [ngValue]="4.5">4.5 hours</option>
+                <option [ngValue]="5">5 hours</option>
+                <option [ngValue]="5.5">5.5 hours</option>
+                <option [ngValue]="6">6 hours</option>
+                <option [ngValue]="6.5">6.5 hours</option>
+                <option [ngValue]="7">7 hours</option>
+                <option [ngValue]="7.5">7.5 hours</option>
+                <option [ngValue]="8">8 hours</option>
+                <option [ngValue]="8.5">8.5 hours</option>
+                <option [ngValue]="9">9 hours</option>
+              </select>
+              <div class="form-text">Select parking duration (0.5 to 9 hours).</div>
+            </div>
+
+            <!-- Booking summary -->
+            <div class="card bg-light mb-4">
+              <div class="card-body">
+                <h6 class="card-title">Booking Summary</h6>
+                <p *ngIf="parkingLocation" class="mb-1">
+                  <strong>Location:</strong> {{ parkingLocation.name }}
+                </p>
+                <p *ngIf="selectedVehicleId" class="mb-1">
+                  <strong>Vehicle:</strong> 
+                  {{ getSelectedVehicleName() }}
+                </p>
+                <p class="mb-1">
+                  <strong>Duration:</strong> {{ durationHours }} hours
+                </p>
+                <p class="mb-0">
+                  <strong>Rate:</strong> ₹{{ currentHourlyRate }}/hour
+                </p>
+                <hr>
+                <p class="mb-0 d-flex justify-content-between">
+                  <strong>Total Amount:</strong> 
+                  <span class="text-primary fw-bold">
+                    ₹{{ getTotalAmount().toFixed(2) }}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Submit button -->
+            <div class="d-grid">
+              <button 
+                type="submit" 
+                class="btn btn-primary btn-lg" 
+                [disabled]="isBooking || !selectedVehicleId || !durationHours"
+              >
+                <span *ngIf="isBooking" class="spinner-border spinner-border-sm me-2"></span>
+                <i *ngIf="!isBooking" class="bi bi-check-circle me-2"></i>
+                {{ isBooking ? 'Processing...' : 'Confirm Booking' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Login Required Modal -->
+<ng-template #loginRequiredModal let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title">Login Required</h4>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body text-center">
+    <i class="bi bi-exclamation-circle text-warning display-1 mb-3"></i>
+    <h5>You must be logged in to book parking</h5>
+    <p class="text-muted">Please log in to your account to continue with the booking process.</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancel</button>
+    <button type="button" class="btn btn-primary" (click)="modal.close()">
+      Go to Login
+    </button>
+  </div>
+</ng-template> 

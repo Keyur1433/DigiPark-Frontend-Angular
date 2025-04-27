@@ -215,16 +215,18 @@ export class ParkingLocationsComponent implements OnInit, AfterViewInit {
     this.showDetails = false;
   }
 
-  bookParking(location: ParkingLocation) {
-    if (this.isUserAuthenticated) {
+  /**
+   * Navigate to booking page for a location
+   */
+  goToBooking(location: any): void {
+    if (this.authService.isLoggedIn()) {
       this.router.navigate(['/parking-locations', location.id, 'booking']);
     } else {
-      if (confirm('Please login first to book parking. Click OK to go to login page.')) {
-        // Save intended location in session storage for redirect after login
-        const redirectUrl = `/parking-locations/${location.id}/booking`;
-        sessionStorage.setItem('redirectAfterLogin', redirectUrl);
-        this.router.navigate(['/login']);
-      }
+      // For unauthenticated users, redirect to login with return URL
+      const redirectUrl = `/parking-locations/${location.id}/booking`;
+      this.router.navigate(['/login'], { 
+        queryParams: { redirect: redirectUrl }
+      });
     }
   }
 

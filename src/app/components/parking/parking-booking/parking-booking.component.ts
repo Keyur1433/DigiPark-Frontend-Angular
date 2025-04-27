@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { ParkingService, ParkingLocation } from '../../../services/parking.service';
 
 @Component({
@@ -35,9 +35,8 @@ import { ParkingService, ParkingLocation } from '../../../services/parking.servi
                 
                 <div class="coming-soon-container mt-5">
                   <i class="bi bi-clock-history display-1 text-primary mb-4"></i>
-                  <h2 class="mb-4">Booking Coming Soon!</h2>
-                  <p class="lead">We're working hard to bring you an amazing booking experience.</p>
-                  <p>This feature will be available soon. Please check back later.</p>
+                  <h2 class="mb-4">Redirecting...</h2>
+                  <p class="lead">Please wait while we redirect you to the booking page.</p>
                   
                   <div class="mt-5">
                     <a routerLink="/parking-locations" class="btn btn-primary me-2">
@@ -65,6 +64,7 @@ export class ParkingBookingComponent implements OnInit {
   
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private parkingService: ParkingService
   ) {}
   
@@ -72,7 +72,8 @@ export class ParkingBookingComponent implements OnInit {
     this.route.paramMap.subscribe(params => {
       const id = params.get('id');
       if (id) {
-        this.loadParkingLocation(+id);
+        // Redirect to the actual booking component
+        this.router.navigate(['/parking-locations', id, 'booking']);
       } else {
         this.isLoading = false;
         this.errorMessage = 'No parking location selected';
@@ -80,6 +81,7 @@ export class ParkingBookingComponent implements OnInit {
     });
   }
   
+  // This method will not be called due to the redirect
   loadParkingLocation(id: number): void {
     this.parkingService.getParkingLocation(id).subscribe({
       next: (location: ParkingLocation) => {

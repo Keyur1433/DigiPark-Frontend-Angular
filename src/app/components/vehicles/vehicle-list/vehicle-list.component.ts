@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgbModal, NgbModalRef, NgbModalModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { VehicleService, Vehicle } from '../../../services/vehicle.service';
 import { Subscription } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-vehicle-list',
@@ -14,17 +15,29 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./vehicle-list.component.css']
 })
 export class VehicleListComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('confirmDeleteModal') confirmDeleteModal: any;
+  
   vehicles: Vehicle[] = [];
   isLoading = true;
-  currentVehicle: Partial<Vehicle> = {};
+  currentVehicle: any = {
+    type: '',
+    number_plate: '',
+    brand: '',
+    model: '',
+    color: ''
+  };
+  vehicleToDelete: Vehicle | null = null;
   modalRef: NgbModalRef | null = null;
   isSubmitting = false;
   alertMessage = '';
   alertType = 'success';
   showAlert = false;
+  modalAlertMessage: string | null = '';
+  modalAlertType = 'danger';
   private subscriptions: Subscription[] = [];
 
   constructor(
+    private route: ActivatedRoute,
     private vehicleService: VehicleService,
     private modalService: NgbModal
   ) {}
@@ -86,6 +99,9 @@ export class VehicleListComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     
+    // Clear any previous modal alert messages
+    this.modalAlertMessage = '';
+    
     // Log the vehicle data before submission for debugging
     console.log('Submitting vehicle data:', this.currentVehicle);
     
@@ -105,7 +121,14 @@ export class VehicleListComponent implements OnInit, OnDestroy, AfterViewInit {
         error: (error) => {
           console.error('Failed to update vehicle', error);
           this.isSubmitting = false;
-          this.showAlertMessage(`Failed to update vehicle: ${error.error?.message || 'Please try again.'}`, 'danger');
+          
+          // Detect specific error for duplicate number plate
+          if (error.error?.message && error.error.message.includes("number plate must be unique")) {
+            this.showModalAlert('Failed to update vehicle: The number plate is already in use', 'danger');
+          } else {
+            // Display other error messages in the modal
+            this.showModalAlert(`Failed to update vehicle: ${error.error?.message || 'Please try again.'}`, 'danger');
+          }
         }
       });
       
@@ -125,7 +148,14 @@ export class VehicleListComponent implements OnInit, OnDestroy, AfterViewInit {
           console.error('Failed to add vehicle', error);
           console.error('Error details:', error.error);
           this.isSubmitting = false;
-          this.showAlertMessage(`Failed to add vehicle: ${error.error?.message || 'Please try again.'}`, 'danger');
+          
+          // Detect specific error for duplicate number plate
+          if (error.error?.message && error.error.message.includes("number plate must be unique")) {
+            this.showModalAlert('Failed to add vehicle: The number plate is already in use', 'danger');
+          } else {
+            // Display other error messages in the modal
+            this.showModalAlert(`Failed to add vehicle: ${error.error?.message || 'Please try again.'}`, 'danger');
+          }
         }
       });
       
@@ -133,49 +163,67 @@ export class VehicleListComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  deleteVehicle(vehicle: Vehicle) {
-    if (confirm(`Are you sure you want to delete ${vehicle.brand} ${vehicle.model}?`)) {
-      this.isLoading = true;
-      
-      const sub = this.vehicleService.deleteVehicle(vehicle.id).subscribe({
-        next: () => {
-          this.showAlertMessage('Vehicle deleted successfully!', 'success');
-          // Reload vehicles after a short delay
-          setTimeout(() => this.loadVehicles(), 300);
-        },
-        error: (error) => {
-          console.error('Failed to delete vehicle', error);
-          this.isLoading = false;
-          this.showAlertMessage('Failed to delete vehicle. Please try again.', 'danger');
+  openConfirmDeleteModal(vehicle: Vehicle): void {
+    this.vehicleToDelete = vehicle;
+    const modalRef = this.modalService.open(this.confirmDeleteModal, {
+      centered: true,
+      backdrop: 'static'
+    });
+    
+    modalRef.result.then(
+      (result) => {
+        if (result === 'confirm' && this.vehicleToDelete) {
+          this.deleteVehicle(this.vehicleToDelete);
         }
-      });
-      
-      this.subscriptions.push(sub);
-    }
+      },
+      () => {
+        // Modal dismissed, do nothing
+        this.vehicleToDelete = null;
+      }
+    );
+  }
+
+  deleteVehicle(vehicle: Vehicle): void {
+    this.isLoading = true;
+    this.vehicleService.deleteVehicle(vehicle.id).subscribe({
+      next: () => {
+        this.loadVehicles();
+        this.showAlertMessage('Vehicle deleted successfully!', 'success');
+      },
+      error: (error) => {
+        this.showAlertMessage('Error deleting vehicle', 'danger');
+        this.isLoading = false;
+      }
+    });
   }
 
   validateVehicleForm(): boolean {
     if (!this.currentVehicle.number_plate || this.currentVehicle.number_plate.trim() === '') {
-      this.showAlertMessage('Number plate is required', 'danger');
+      this.showModalAlert('Number plate is required', 'danger');
       return false;
     }
     
     if (!this.currentVehicle.type || this.currentVehicle.type.trim() === '') {
-      this.showAlertMessage('Vehicle type is required', 'danger');
+      this.showModalAlert('Vehicle type is required', 'danger');
       return false;
     }
     
     if (!this.currentVehicle.brand || this.currentVehicle.brand.trim() === '') {
-      this.showAlertMessage('Brand is required', 'danger');
+      this.showModalAlert('Brand is required', 'danger');
       return false;
     }
     
     if (!this.currentVehicle.model || this.currentVehicle.model.trim() === '') {
-      this.showAlertMessage('Model is required', 'danger');
+      this.showModalAlert('Model is required', 'danger');
       return false;
     }
     
     return true;
+  }
+
+  showModalAlert(message: string | null, type: 'success' | 'danger') {
+    this.modalAlertMessage = message;
+    this.modalAlertType = type;
   }
 
   showAlertMessage(message: string, type: 'success' | 'danger') {

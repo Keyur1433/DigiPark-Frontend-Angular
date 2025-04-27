@@ -147,6 +147,13 @@ export class ParkingLocationService {
   }
 
   /**
+   * Get details for a specific parking location by ID string
+   */
+  getParkingLocationById(locationId: string): Observable<any> {
+    return this.getParkingLocationDetails(parseInt(locationId, 10));
+  }
+
+  /**
    * Get details for a specific parking location
    */
   getParkingLocationDetails(locationId: number): Observable<any> {

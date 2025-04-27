@@ -6,7 +6,7 @@
         <p class="lead mb-4">Discover convenient parking locations near you, reserve your spot in advance, and enjoy hassle-free parking.</p>
         <div class="d-grid gap-2 d-md-flex justify-content-md-start mb-4">
           <a routerLink="/parking-locations" class="btn btn-primary btn-lg px-4 me-md-2">Find Parking</a>
-          <a *ngIf="!isAuthenticated" routerLink="/register" class="btn btn-outline-primary btn-lg px-4">Sign Up</a>
+          <a *ngIf="!isAuthenticated" routerLink="/login" class="btn btn-outline-primary btn-lg px-4">Login</a>
           <a *ngIf="isAuthenticated" [routerLink]="[userRole === 'owner' ? '/owner' : '/user', userId, 'dashboard']" class="btn btn-outline-primary btn-lg px-4">My Profile</a>
         </div>
       </div>

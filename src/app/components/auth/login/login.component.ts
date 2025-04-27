@@ -73,7 +73,8 @@ export class LoginComponent {
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.authService.login(this.loginForm.value).subscribe({
+    const { contact_number, password } = this.loginForm.value;
+    this.authService.login(contact_number, password).subscribe({
       next: (response) => {
         this.isSubmitting = false;
         this.successMessage = response.message || 'Login successful';
@@ -85,12 +86,14 @@ export class LoginComponent {
           this.router.navigateByUrl(redirectUrl);
         } else {
           // Default redirect based on user role
-          const user = this.authService.getCurrentUser();
-          if (user) {
-            if (user.role === 'owner') {
-              this.router.navigate(['/owner', user.id, 'dashboard']);
+          const userId = this.authService.getUserId();
+          const userRole = this.authService.getUserRole();
+          
+          if (userId && userRole) {
+            if (userRole === 'owner') {
+              this.router.navigate(['/owner', userId, 'dashboard']);
             } else {
-              this.router.navigate(['/user', user.id, 'dashboard']);
+              this.router.navigate(['/user', userId, 'dashboard']);
             }
           } else {
             // Fallback to home page if user info is not available
