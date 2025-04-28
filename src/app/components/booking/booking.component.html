@@ -1,6 +1,6 @@
 <div class="container mt-4">
   <div class="row">
-    <div class="col-lg-8 mx-auto">
+    <div class="col-lg-10 mx-auto">
       <!-- Page header -->
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -74,37 +74,170 @@
               <div class="form-text">Select one of your registered vehicles for parking.</div>
             </div>
 
-            <!-- Duration selection -->
+            <!-- Date and Time Selection -->
             <div class="mb-4">
-              <label for="durationSelect" class="form-label">Parking Duration (hours)</label>
-              <select 
-                class="form-select" 
-                id="durationSelect" 
-                [(ngModel)]="durationHours" 
-                name="duration"
-                required
-                (ngModelChange)="onDurationChange()"
-              >
-                <option [ngValue]="0.5">30 minutes</option>
-                <option [ngValue]="1">1 hour</option>
-                <option [ngValue]="1.5">1.5 hours</option>
-                <option [ngValue]="2">2 hours</option>
-                <option [ngValue]="2.5">2.5 hours</option>
-                <option [ngValue]="3">3 hours</option>
-                <option [ngValue]="3.5">3.5 hours</option>
-                <option [ngValue]="4">4 hours</option>
-                <option [ngValue]="4.5">4.5 hours</option>
-                <option [ngValue]="5">5 hours</option>
-                <option [ngValue]="5.5">5.5 hours</option>
-                <option [ngValue]="6">6 hours</option>
-                <option [ngValue]="6.5">6.5 hours</option>
-                <option [ngValue]="7">7 hours</option>
-                <option [ngValue]="7.5">7.5 hours</option>
-                <option [ngValue]="8">8 hours</option>
-                <option [ngValue]="8.5">8.5 hours</option>
-                <option [ngValue]="9">9 hours</option>
-              </select>
-              <div class="form-text">Select parking duration (0.5 to 9 hours).</div>
+              <label class="form-label">Select Date and Time</label>
+              <div class="date-time-selector">
+                <div>
+                  <label for="bookingDate" class="form-label">Date</label>
+                  <input 
+                    type="date" 
+                    class="form-control" 
+                    id="bookingDate" 
+                    [(ngModel)]="bookingDate" 
+                    name="bookingDate" 
+                    required
+                    [min]="bookingDate"
+                    (change)="selectedSlotId = null"
+                  >
+                </div>
+                <div>
+                  <label for="startTime" class="form-label">Start Time</label>
+                  <input 
+                    type="time" 
+                    class="form-control" 
+                    id="startTime" 
+                    [(ngModel)]="startTime" 
+                    name="startTime" 
+                    required
+                    (change)="onStartTimeChange()"
+                  >
+                </div>
+                <div>
+                  <label for="endTime" class="form-label">End Time</label>
+                  <input 
+                    type="time" 
+                    class="form-control" 
+                    id="endTime" 
+                    [(ngModel)]="endTime" 
+                    name="endTime" 
+                    required
+                    [disabled]="!startTime"
+                  >
+                </div>
+                <div>
+                  <label for="durationSelect" class="form-label">Duration</label>
+                  <select 
+                    class="form-select" 
+                    id="durationSelect" 
+                    [(ngModel)]="durationHours" 
+                    name="duration"
+                    required
+                    (ngModelChange)="onDurationChange()"
+                  >
+                    <option [ngValue]="0.5">30 minutes</option>
+                    <option [ngValue]="1">1 hour</option>
+                    <option [ngValue]="1.5">1.5 hours</option>
+                    <option [ngValue]="2">2 hours</option>
+                    <option [ngValue]="2.5">2.5 hours</option>
+                    <option [ngValue]="3">3 hours</option>
+                    <option [ngValue]="3.5">3.5 hours</option>
+                    <option [ngValue]="4">4 hours</option>
+                    <option [ngValue]="4.5">4.5 hours</option>
+                    <option [ngValue]="5">5 hours</option>
+                    <option [ngValue]="5.5">5.5 hours</option>
+                    <option [ngValue]="6">6 hours</option>
+                    <option [ngValue]="6.5">6.5 hours</option>
+                    <option [ngValue]="7">7 hours</option>
+                    <option [ngValue]="7.5">7.5 hours</option>
+                    <option [ngValue]="8">8 hours</option>
+                    <option [ngValue]="8.5">8.5 hours</option>
+                    <option [ngValue]="9">9 hours</option>
+                  </select>
+                </div>
+              </div>
+              <div class="d-grid mt-2">
+                <button 
+                  type="button" 
+                  class="btn btn-outline-primary" 
+                  (click)="loadAvailableSlots()"
+                  [disabled]="!selectedVehicleId || !bookingDate || !startTime || !endTime">
+                  <i class="bi bi-search me-2"></i>Find Available Slots
+                </button>
+              </div>
+            </div>
+
+            <!-- Slot Selection Section -->
+            <div *ngIf="isLoadingSlots" class="text-center py-3">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading slots...</span>
+              </div>
+              <p class="mt-2 text-muted">Loading available parking slots...</p>
+            </div>
+
+            <div *ngIf="showSlotSelection && !isLoadingSlots" class="mb-4">
+              <div class="card slot-info">
+                <div class="card-body">
+                  <h5 class="card-title">Slot Availability</h5>
+                  <div *ngIf="slotAvailabilities.length > 0">
+                    <div *ngFor="let availability of slotAvailabilities" class="mb-2">
+                      <span class="badge rounded-pill"
+                        [ngClass]="{
+                          'bg-success': availability.available_slots === availability.total_slots,
+                          'bg-warning': availability.available_slots > 0 && availability.available_slots < availability.total_slots,
+                          'bg-danger': availability.available_slots === 0
+                        }"
+                      >
+                        {{ availability.vehicle_type }}
+                      </span>
+                      {{ availability.available_slots }} / {{ availability.total_slots }} slots available
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <h5 class="mb-3">Select a Parking Slot</h5>
+              
+              <!-- Slot Legend -->
+              <div class="slot-legend mb-3">
+                <div class="legend-item">
+                  <div class="legend-color color-available"></div>
+                  <span>Available</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color color-selected"></div>
+                  <span>Selected</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color color-occupied"></div>
+                  <span>Occupied</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color color-reserved"></div>
+                  <span>Reserved</span>
+                </div>
+              </div>
+
+              <!-- Two Wheeler Slots -->
+              <div *ngIf="twoWheelerSlots.length > 0">
+                <div class="vehicle-type-header">Two Wheeler Slots</div>
+                <div class="slot-grid">
+                  <div *ngFor="let slot of twoWheelerSlots" 
+                    class="slot" 
+                    [ngClass]="getSlotClass(slot)"
+                    (click)="toggleSlotSelection(slot)">
+                    <div class="slot-label">{{ slot.slot_number }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Four Wheeler Slots -->
+              <div *ngIf="fourWheelerSlots.length > 0">
+                <div class="vehicle-type-header">Four Wheeler Slots</div>
+                <div class="slot-grid">
+                  <div *ngFor="let slot of fourWheelerSlots" 
+                    class="slot" 
+                    [ngClass]="getSlotClass(slot)"
+                    (click)="toggleSlotSelection(slot)">
+                    <div class="slot-label">{{ slot.slot_number }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- No Slots Available Message -->
+              <div *ngIf="(twoWheelerSlots.length === 0 && fourWheelerSlots.length === 0)" class="alert alert-warning">
+                No parking slots are available for the selected date and time. Please try a different date or time.
+              </div>
             </div>
 
             <!-- Booking summary -->
@@ -117,6 +250,16 @@
                 <p *ngIf="selectedVehicleId" class="mb-1">
                   <strong>Vehicle:</strong> 
                   {{ getSelectedVehicleName() }}
+                </p>
+                <p *ngIf="bookingDate" class="mb-1">
+                  <strong>Date:</strong> {{ bookingDate }}
+                </p>
+                <p *ngIf="startTime && endTime" class="mb-1">
+                  <strong>Time:</strong> {{ startTime }} - {{ endTime }}
+                </p>
+                <p *ngIf="selectedSlotId && availableSlots.length > 0" class="mb-1">
+                  <strong>Selected Slot:</strong>
+                  {{ getSelectedSlotNumber() }}
                 </p>
                 <p class="mb-1">
                   <strong>Duration:</strong> {{ durationHours }} hours
@@ -139,7 +282,7 @@
               <button 
                 type="submit" 
                 class="btn btn-primary btn-lg" 
-                [disabled]="isBooking || !selectedVehicleId || !durationHours"
+                [disabled]="isBooking || !isFormValid()"
               >
                 <span *ngIf="isBooking" class="spinner-border spinner-border-sm me-2"></span>
                 <i *ngIf="!isBooking" class="bi bi-check-circle me-2"></i>

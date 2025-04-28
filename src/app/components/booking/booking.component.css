@@ -62,4 +62,144 @@
 .modal-content {
   border-radius: 8px;
   overflow: hidden;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.slot {
+  padding: 10px;
+  text-align: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #ddd;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  user-select: none;
+}
+
+.slot-label {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.slot-type {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.slot-available {
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+}
+
+.slot-available:hover {
+  background-color: #f0f8ff;
+  border-color: #0d6efd;
+}
+
+.slot-selected {
+  background-color: #0d6efd;
+  color: white;
+  border-color: #0a58ca;
+}
+
+.slot-occupied {
+  background-color: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.slot-reserved {
+  background-color: #fff3cd;
+  color: #664d03;
+  cursor: not-allowed;
+  border-color: #ffecb5;
+}
+
+.vehicle-type-header {
+  margin-top: 15px;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.slot-info {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.slot-legend {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+}
+
+.color-available {
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+}
+
+.color-selected {
+  background-color: #0d6efd;
+}
+
+.color-occupied {
+  background-color: #e9ecef;
+}
+
+.color-reserved {
+  background-color: #fff3cd;
+}
+
+.date-time-selector {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.date-time-selector > div {
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .slot-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .date-time-selector {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 576px) {
+  .slot-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .slot-legend {
+    flex-wrap: wrap;
+  }
 } 

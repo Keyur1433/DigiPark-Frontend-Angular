@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
+import { NgbModal, NgbModalRef, NgbDatepickerModule, NgbTimepickerModule } from '@ng-bootstrap/ng-bootstrap';
 
 import { VehicleService, Vehicle } from '../../services/vehicle.service';
 import { ParkingLocationService } from '../../services/parking-location.service';
@@ -11,10 +11,22 @@ import { BookingService } from '../../services/booking.service';
 
 import { ParkingLocation } from '../../models/parking-location.model';
 
+interface ParkingSlot {
+  id: number;
+  slot_number: string;
+  vehicle_type: string;
+  is_active: boolean;
+  is_occupied: boolean;
+  has_upcoming_booking: boolean;
+  is_available_for_time_range: boolean;
+  bookings: any[];
+  status: string;
+}
+
 @Component({
   selector: 'app-booking',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NgbDatepickerModule, NgbTimepickerModule],
   templateUrl: './booking.component.html',
   styleUrls: ['./booking.component.css']
 })
@@ -29,6 +41,18 @@ export class BookingComponent implements OnInit {
   durationHours: number = 1; // Default 1 hour
   currentHourlyRate: number = 0;
 
+  // New properties for slot selection
+  bookingDate: string = '';
+  startTime: string = '';
+  endTime: string = '';
+  availableSlots: ParkingSlot[] = [];
+  selectedSlotId: number | null = null;
+  twoWheelerSlots: ParkingSlot[] = [];
+  fourWheelerSlots: ParkingSlot[] = [];
+  isLoadingSlots: boolean = false;
+  slotAvailabilities: any[] = [];
+  showSlotSelection: boolean = false;
+
   isLoading: boolean = true;
   isBooking: boolean = false;
   errorMessage: string | null = null;
@@ -42,7 +66,25 @@ export class BookingComponent implements OnInit {
     private parkingLocationService: ParkingLocationService,
     private authService: AuthService,
     private bookingService: BookingService
-  ) {}
+  ) {
+    // Initialize today's date in YYYY-MM-DD format
+    const today = new Date();
+    this.bookingDate = today.toISOString().split('T')[0];
+    
+    // Initialize start time to current hour + 30 minutes, rounded to nearest 30 minutes
+    const currentHour = today.getHours();
+    const currentMinute = today.getMinutes();
+    const roundedMinute = currentMinute < 30 ? 30 : 0;
+    const roundedHour = roundedMinute === 0 && currentMinute >= 30 ? currentHour + 1 : currentHour;
+    
+    this.startTime = `${roundedHour.toString().padStart(2, '0')}:${roundedMinute.toString().padStart(2, '0')}`;
+    
+    // Initialize end time to start time + 1 hour
+    const endDate = new Date();
+    endDate.setHours(roundedHour + 1);
+    endDate.setMinutes(roundedMinute);
+    this.endTime = `${endDate.getHours().toString().padStart(2, '0')}:${roundedMinute.toString().padStart(2, '0')}`;
+  }
 
   ngOnInit(): void {
     // Check if user is logged in
@@ -137,9 +179,16 @@ export class BookingComponent implements OnInit {
     if (this.selectedVehicleId) {
       this.selectedVehicle = this.vehicles.find(v => v.id === Number(this.selectedVehicleId)) || null;
       this.updateHourlyRate();
+      // Reset slot selection when vehicle changes
+      this.selectedSlotId = null;
+      // Load available slots if we have all the required information
+      if (this.bookingDate && this.startTime && this.endTime) {
+        this.loadAvailableSlots();
+      }
     } else {
       this.selectedVehicle = null;
       this.currentHourlyRate = 0;
+      this.showSlotSelection = false;
     }
   }
 
@@ -167,23 +216,145 @@ export class BookingComponent implements OnInit {
 
   // Handle changes in duration
   onDurationChange(): void {
-    // No need to update hourly rate, just recalculate total with existing rate
+    if (this.durationHours && this.startTime) {
+      // Update end time based on duration
+      const [hours, minutes] = this.startTime.split(':').map(Number);
+      const startDate = new Date();
+      startDate.setHours(hours, minutes, 0, 0);
+      
+      // Calculate end time by adding duration hours
+      const endDate = new Date(startDate.getTime() + (this.durationHours * 60 * 60 * 1000));
+      const endHours = endDate.getHours().toString().padStart(2, '0');
+      const endMinutes = endDate.getMinutes().toString().padStart(2, '0');
+      
+      this.endTime = `${endHours}:${endMinutes}`;
+      
+      // Reload available slots if we have all the required information
+      if (this.bookingDate && this.selectedVehicle) {
+        this.loadAvailableSlots();
+      }
+    }
   }
 
+  // Handle changes in start time
+  onStartTimeChange(): void {
+    if (this.startTime && this.durationHours) {
+      // Update end time based on start time and duration
+      const [hours, minutes] = this.startTime.split(':').map(Number);
+      const startDate = new Date();
+      startDate.setHours(hours, minutes, 0, 0);
+      
+      // Calculate end time by adding duration hours
+      const endDate = new Date(startDate.getTime() + (this.durationHours * 60 * 60 * 1000));
+      const endHours = endDate.getHours().toString().padStart(2, '0');
+      const endMinutes = endDate.getMinutes().toString().padStart(2, '0');
+      
+      this.endTime = `${endHours}:${endMinutes}`;
+      
+      // Reload available slots if we have all the required information
+      if (this.bookingDate && this.selectedVehicle) {
+        this.loadAvailableSlots();
+      }
+    }
+  }
+
+  // Load available slots for the selected date, time range, and vehicle type
+  loadAvailableSlots(): void {
+    if (!this.parkingLocationId || !this.bookingDate || !this.startTime || !this.endTime || !this.selectedVehicle) {
+      return;
+    }
+
+    this.isLoadingSlots = true;
+    this.errorMessage = null;
+    this.selectedSlotId = null;
+    this.showSlotSelection = false;
+
+    const vehicleType = this.selectedVehicle.type;
+
+    this.bookingService.getAvailableSlots(
+      this.parkingLocationId,
+      this.bookingDate,
+      this.startTime,
+      this.endTime,
+      vehicleType
+    ).subscribe({
+      next: (response) => {
+        this.isLoadingSlots = false;
+        
+        if (response && response.slots) {
+          this.availableSlots = response.slots;
+          this.slotAvailabilities = response.slot_availabilities || [];
+          
+          // Separate slots by vehicle type
+          this.twoWheelerSlots = this.availableSlots.filter(slot => slot.vehicle_type === '2-wheeler');
+          this.fourWheelerSlots = this.availableSlots.filter(slot => slot.vehicle_type === '4-wheeler');
+          
+          console.log('Available slots loaded:', this.availableSlots.length);
+          console.log('Two-wheeler slots:', this.twoWheelerSlots.length);
+          console.log('Four-wheeler slots:', this.fourWheelerSlots.length);
+          
+          this.showSlotSelection = true;
+        } else {
+          this.errorMessage = 'Failed to load available slots.';
+        }
+      },
+      error: (error) => {
+        this.isLoadingSlots = false;
+        this.errorMessage = 'Failed to load available slots. Please try again.';
+      }
+    });
+  }
+
+  // Select or deselect a slot
+  toggleSlotSelection(slot: ParkingSlot): void {
+    if (!slot.is_available_for_time_range) {
+      return; // Can't select unavailable slots
+    }
+    
+    if (this.selectedSlotId === slot.id) {
+      // Deselect if already selected
+      this.selectedSlotId = null;
+    } else {
+      // Select new slot
+      this.selectedSlotId = slot.id;
+    }
+  }
+
+  // Get the CSS class for a slot based on its status
+  getSlotClass(slot: ParkingSlot): string {
+    if (this.selectedSlotId === slot.id) {
+      return 'slot-selected';
+    } else if (!slot.is_available_for_time_range) {
+      return slot.is_occupied ? 'slot-occupied' : 'slot-reserved';
+    } else {
+      return 'slot-available';
+    }
+  }
+
+  // Get the selected slot number
+  getSelectedSlotNumber(): string {
+    if (!this.selectedSlotId || this.availableSlots.length === 0) return '';
+    
+    const selectedSlot = this.availableSlots.find(slot => slot.id === this.selectedSlotId);
+    return selectedSlot ? selectedSlot.slot_number : '';
+  }
+
+  // Check if form is valid for booking
+  isFormValid(): boolean {
+    return !!(
+      this.selectedVehicleId && 
+      this.bookingDate && 
+      this.startTime && 
+      this.endTime && 
+      this.durationHours &&
+      this.selectedSlotId
+    );
+  }
+
+  // Book the parking slot
   bookParking(): void {
-    // Validate inputs
-    if (!this.selectedVehicleId) {
-      this.errorMessage = 'Please select a vehicle.';
-      return;
-    }
-
-    if (!this.durationHours) {
-      this.errorMessage = 'Please select a valid duration.';
-      return;
-    }
-
-    if (!this.parkingLocationId) {
-      this.errorMessage = 'Invalid parking location.';
+    if (!this.isFormValid()) {
+      this.errorMessage = 'Please complete all required fields and select a parking slot.';
       return;
     }
 
@@ -191,27 +362,47 @@ export class BookingComponent implements OnInit {
     this.errorMessage = null;
     this.successMessage = null;
 
-    // Prepare booking data
+    // Calculate duration in hours based on start and end time
+    const [startHours, startMinutes] = this.startTime.split(':').map(Number);
+    const [endHours, endMinutes] = this.endTime.split(':').map(Number);
+    const startTimeMinutes = startHours * 60 + startMinutes;
+    const endTimeMinutes = endHours * 60 + endMinutes;
+    const durationMinutes = endTimeMinutes - startTimeMinutes;
+    const calculatedDuration = durationMinutes / 60;
+
+    // Prepare booking data in the format expected by the backend API
     const bookingData = {
-      parking_location_id: this.parkingLocationId,
-      vehicle_id: this.selectedVehicleId,
-      duration_hours: this.durationHours
+      parking_location_id: parseInt(this.parkingLocationId!, 10),
+      vehicle_id: parseInt(this.selectedVehicleId!, 10),
+      parking_slot_id: this.selectedSlotId,
+      duration_hours: calculatedDuration,
+      booking_date: this.bookingDate,
+      start_time: this.startTime,
+      end_time: this.endTime,
+      amount: this.getTotalAmount()
     };
 
-    console.log('Sending booking request:', bookingData);
+    console.log('Sending booking request with slot selection:', bookingData);
 
     // Send booking request
     this.bookingService.createBooking(bookingData)
       .subscribe({
         next: (response: any) => {
-          console.log('Booking successful:', response);
+          console.log('Booking response received:', response);
           this.isBooking = false;
-          this.successMessage = 'Booking successful! Your parking is confirmed.';
+          
+          if (response && response.success) {
+            this.successMessage = response.message || 'Booking successful! Your parking is confirmed.';
+          } else if (response && response.message) {
+            this.successMessage = response.message;
+          } else {
+            this.successMessage = 'Booking successful! Your parking is confirmed.';
+          }
           
           // Store the booking ID in localStorage to ensure it can be referenced later
           try {
-            if (response && response.id) {
-              const bookingId = response.id.toString();
+            if (response && response.booking && response.booking.id) {
+              const bookingId = response.booking.id.toString();
               console.log('Storing booking ID in localStorage:', bookingId);
               
               // Store as a recent booking
@@ -220,11 +411,11 @@ export class BookingComponent implements OnInit {
               localStorage.setItem('recent_bookings', JSON.stringify(recentBookings.slice(0, 10)));
               
               // Also store the full booking data if available
-              if (typeof response === 'object') {
+              if (response.booking) {
                 try {
                   const bookingsCache = JSON.parse(localStorage.getItem('bookings_cache') || '{}');
                   bookingsCache[bookingId] = {
-                    data: response,
+                    data: response.booking,
                     timestamp: Date.now()
                   };
                   localStorage.setItem('bookings_cache', JSON.stringify(bookingsCache));
@@ -249,56 +440,37 @@ export class BookingComponent implements OnInit {
                       const userId = user.id;
                       // Navigate to user dashboard after a short delay
                       setTimeout(() => {
-                        console.log('Navigating to dashboard with user ID:', userId);
-                        this.router.navigate(['/user', userId, 'dashboard'], {
-                          queryParams: { booking_success: 'true' }
-                        });
+                        this.router.navigate(['/user', userId, 'dashboard']);
                       }, 2000);
                     } else {
-                      const fallbackUserId = this.authService.getUserId();
-                      setTimeout(() => {
-                        console.log('Navigating to dashboard with fallback user ID:', fallbackUserId);
-                        this.router.navigate(['/user', fallbackUserId, 'dashboard'], {
-                          queryParams: { booking_success: 'true' }
-                        });
-                      }, 2000);
+                      console.error('User not found after refresh');
+                      this.router.navigate(['/']);
                     }
                   },
                   error: (error) => {
-                    // Fallback to getting ID from existing auth service if fetch fails
-                    console.error('Error fetching current user after booking:', error);
-                    const userId = this.authService.getUserId();
-                    setTimeout(() => {
-                      console.log('Navigating to dashboard with fallback user ID after fetch error:', userId);
-                      this.router.navigate(['/user', userId, 'dashboard'], {
-                        queryParams: { booking_success: 'true' }
-                      });
-                    }, 2000);
+                    console.error('Error fetching user after booking:', error);
+                    this.router.navigate(['/']);
                   }
                 });
               } else {
-                console.error('User not authenticated after booking, redirecting to login');
-                this.router.navigate(['/login']);
+                console.error('User not authenticated after refresh');
+                this.router.navigate(['/']);
               }
             },
             error: (error) => {
               console.error('Error refreshing auth state after booking:', error);
-              this.router.navigate(['/login']);
+              this.router.navigate(['/']);
             }
           });
         },
-        error: (error: any) => {
+        error: (error) => {
           this.isBooking = false;
           console.error('Booking error:', error);
           
-          if (error.status === 422) {
-            this.errorMessage = error.error?.message || 'Validation failed.';
-          } else if (error.status === 403) {
-            this.errorMessage = 'You are not authorized to make this booking.';
-          } else if (error.status === 409) {
-            this.errorMessage = 'This vehicle is already parked.';
+          if (error.error && error.error.message) {
+            this.errorMessage = error.error.message;
           } else {
-            this.errorMessage = 'Failed to process your booking. Please try again.';
+            this.errorMessage = 'Booking failed. Please try again.';
           }
         }
       });

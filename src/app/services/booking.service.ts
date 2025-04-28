@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
 import { catchError, tap, retry, map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
@@ -15,10 +15,42 @@ export class BookingService {
     console.log('BookingService initialized with API URL:', this.apiUrl);
   }
 
+  // Get available parking slots for a location, date and time range
+  getAvailableSlots(
+    locationId: string, 
+    date: string, 
+    startTime: string, 
+    endTime: string, 
+    vehicleType?: string
+  ): Observable<any> {
+    console.log(`Fetching available slots for location ${locationId} on ${date} from ${startTime} to ${endTime}`);
+    
+    let params = new HttpParams()
+      .set('date', date)
+      .set('start_time', startTime)
+      .set('end_time', endTime);
+    
+    if (vehicleType) {
+      params = params.set('vehicle_type', vehicleType);
+    }
+    
+    return this.http.get<any>(`${this.apiUrl}/parking-locations/${locationId}/available-slots`, { params })
+      .pipe(
+        tap(response => console.log('Available slots retrieved:', response)),
+        catchError(this.handleError('getAvailableSlots', {}))
+      );
+  }
+
   createBooking(bookingData: {
-    parking_location_id: string;
-    vehicle_id: string;
+    parking_location_id: number | string;
+    vehicle_id: number | string;
+    parking_slot_id: number | null;
     duration_hours: number;
+    booking_date?: string;
+    date?: string;
+    start_time?: string;
+    end_time?: string;
+    amount?: number;
   }): Observable<any> {
     console.log('Creating booking with data:', bookingData);
     return this.http.post<any>(`${this.apiUrl}/bookings/check-in`, bookingData)
