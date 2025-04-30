@@ -92,7 +92,22 @@ export class BookingService {
     console.log(`Fetching details for booking ${bookingId}`);
     return this.http.get<any>(`${this.apiUrl}/bookings/${bookingId}`)
       .pipe(
-        tap(booking => console.log('Booking details retrieved:', booking)),
+        map(response => {
+          console.log('Raw booking details response:', response);
+          
+          // Handle different response formats
+          if (response && response.booking) {
+            // Backend returns nested in 'booking' property
+            return response.booking;
+          } else if (response && typeof response === 'object' && response.id) {
+            // Backend returns booking object directly
+            return response;
+          } else {
+            console.warn('Unexpected booking details format:', response);
+            return response;
+          }
+        }),
+        tap(booking => console.log('Booking details processed:', booking)),
         catchError(this.handleError(`getBookingDetails id=${bookingId}`))
       );
   }

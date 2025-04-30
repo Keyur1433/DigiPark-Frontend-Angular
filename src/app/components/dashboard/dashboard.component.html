@@ -174,7 +174,7 @@
                           </td>
                           <td>₹{{ booking.amount }}</td>
                           <td>
-                            <button class="btn btn-sm btn-outline-primary me-1">View</button>
+                            <button class="btn btn-sm btn-outline-primary me-1" (click)="viewBookingDetails(booking.id)">View</button>
                             <button *ngIf="booking.status === 'upcoming'" 
                                     class="btn btn-sm btn-outline-danger"
                                     (click)="cancelBooking(booking.id)">
@@ -186,7 +186,7 @@
                     </table>
                   </div>
                   <div *ngIf="recentBookings.length > 0" class="text-center mt-3">
-                    <button class="btn btn-outline-primary">View All Bookings</button>
+                    <button class="btn btn-outline-primary" [routerLink]="['/user', userId, 'all-bookings']">View All Bookings</button>
                   </div>
                 </div>
               </ng-template>
@@ -210,6 +210,7 @@
                           </div>
                         </div>
                       </div>
+
                       <div class="text-center mt-5">
                         <img src="assets/images/map-placeholder.svg" alt="Map placeholder" class="img-fluid rounded">
                         <p class="text-muted mt-3">Find the best parking spots at the best prices</p>
@@ -227,4 +228,131 @@
       </div>
     </div>
   </div>
-</div> 
+</div>
+
+<!-- Booking Details Modal -->
+<ng-template #bookingDetailsModal let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title">Booking Details</h4>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body" *ngIf="selectedBooking">
+    <div *ngIf="isLoadingBookingDetails" class="text-center py-3">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading booking details...</span>
+      </div>
+      <p class="mt-2">Loading booking details...</p>
+    </div>
+    
+    <div *ngIf="!isLoadingBookingDetails && selectedBooking">
+      <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Booking #{{ selectedBooking.id }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Status:</strong></p>
+              <span class="badge rounded-pill {{ getStatusClass(selectedBooking.status) }}">
+                {{ selectedBooking.status | titlecase }}
+              </span>
+            </div>
+            <div class="col-md-6 text-md-end">
+              <p class="mb-1"><strong>Amount:</strong></p>
+              <h5>₹{{ selectedBooking.amount }}</h5>
+            </div>
+          </div>
+          
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Booking Date:</strong></p>
+              <p>{{ selectedBooking.created_at | date: 'medium' }}</p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Booking ID:</strong></p>
+              <p>{{ selectedBooking.id }}</p>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Location:</strong></p>
+              <p>{{ selectedBooking.parking_location?.name || 'N/A' }}</p>
+              <p *ngIf="selectedBooking.parking_location?.address" class="text-muted small">
+                {{ selectedBooking.parking_location?.address }}
+              </p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Parking Slot:</strong></p>
+              <p>{{ selectedBooking.parking_slot?.slot_number || 'N/A' }}</p>
+              <p class="text-muted small">
+                {{ selectedBooking.parking_slot?.vehicle_type || 'N/A' }} Slot
+              </p>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Check-in Time:</strong></p>
+              <p>{{ selectedBooking.check_in_time ? (selectedBooking.check_in_time | date: 'medium') : 'Not checked in yet' }}</p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Check-out Time:</strong></p>
+              <p>{{ selectedBooking.check_out_time ? (selectedBooking.check_out_time | date: 'medium') : 'Not checked out yet' }}</p>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Duration:</strong></p>
+              <p>{{ selectedBooking.duration_hours }} hours</p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Booking Type:</strong></p>
+              <p>{{ selectedBooking.booking_type === 'check_in' ? 'Instant Check-in' : 'Advance Booking' | titlecase }}</p>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Vehicle:</strong></p>
+              <p>{{ selectedBooking.vehicle?.number_plate || 'N/A' }}</p>
+              <p class="text-muted small" *ngIf="selectedBooking.vehicle">
+                {{ selectedBooking.vehicle?.brand }} {{ selectedBooking.vehicle?.model }} ({{ selectedBooking.vehicle?.type }})
+              </p>
+            </div>
+            <div class="col-md-6" *ngIf="selectedBooking.qr_code">
+              <p class="mb-1"><strong>QR Code:</strong></p>
+              <p class="text-muted small">Use this QR code when checking in/out at the parking location</p>
+              <div class="text-center">
+                <img 
+                  *ngIf="selectedBooking.qr_code" 
+                  [src]="'data:image/png;base64,' + selectedBooking.qr_code" 
+                  alt="Booking QR Code" 
+                  class="img-fluid" 
+                  style="max-width: 150px;">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Actions -->
+      <div class="d-flex justify-content-end">
+        <button 
+          *ngIf="selectedBooking.status === 'upcoming' || selectedBooking.status === 'booked'" 
+          class="btn btn-danger me-2" 
+          (click)="cancelBookingFromModal(selectedBooking.id)">
+          Cancel Booking
+        </button>
+        <button class="btn btn-primary" (click)="modal.close()">Close</button>
+      </div>
+    </div>
+  </div>
+</ng-template> 

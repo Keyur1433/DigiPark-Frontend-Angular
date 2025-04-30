@@ -1,0 +1,46 @@
+.tab-content {
+  padding: 20px 0;
+}
+
+.booking-count {
+  font-size: 0.9rem;
+  color: white !important;
+  margin-left: 5px;
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+}
+
+.back-button {
+  margin-bottom: 20px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 50px 0;
+}
+
+.empty-state i {
+  font-size: 4rem;
+  color: #dee2e6;
+  margin-bottom: 20px;
+}
+
+.empty-state h5 {
+  color: #495057;
+  margin-bottom: 10px;
+}
+
+.empty-state p {
+  color: #6c757d;
+  max-width: 400px;
+  margin: 0 auto 20px;
+}
+
+@media (max-width: 768px) {
+  .table-responsive {
+    overflow-x: auto;
+  }
+} 

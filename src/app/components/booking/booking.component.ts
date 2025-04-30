@@ -396,7 +396,7 @@ export class BookingComponent implements OnInit {
           } else if (response && response.message) {
             this.successMessage = response.message;
           } else {
-            this.successMessage = 'Booking successful! Your parking is confirmed.';
+          this.successMessage = 'Booking successful! Your parking is confirmed.';
           }
           
           // Store the booking ID in localStorage to ensure it can be referenced later

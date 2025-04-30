@@ -61,6 +61,12 @@ export const routes: Routes = [
     loadComponent: () => import('./components/parking/parking-locations/parking-locations.component').then(m => m.ParkingLocationsComponent),
     title: 'Parking Locations'
   },
+  {
+    path: 'user/:id/all-bookings',
+    canActivate: [authGuardFn],
+    loadComponent: () => import('../app/components/bookings/all-bookings/all-bookings.component').then(m => m.AllBookingsComponent),
+    title: 'All Bookings'
+  },
   
   ...OWNER_ROUTES,
   

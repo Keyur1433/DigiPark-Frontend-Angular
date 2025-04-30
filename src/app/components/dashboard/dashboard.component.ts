@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
-import { NgbDropdownModule, NgbNavModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDropdownModule, NgbModalRef, NgbNavModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { AuthService, UserProfile } from '../../services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { VehicleService, Vehicle } from '../../services/vehicle.service';
@@ -37,12 +37,15 @@ interface BookingDisplay {
     CommonModule, 
     RouterModule, 
     NgbNavModule, 
-    NgbDropdownModule
+    NgbDropdownModule,
+    DatePipe
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  @ViewChild('bookingDetailsModal') bookingDetailsModal: any;
+
   user: UserProfile | null = null;
   userId: number | null = null;
   userRole: string | null = null;
@@ -55,6 +58,14 @@ export class DashboardComponent implements OnInit {
   currentDate = new Date();
   locationMap: { [key: string]: string } = {}; // Map location IDs to names
   
+  // New properties for booking details
+  selectedBooking: any = null;
+  isLoadingBookingDetails = false;
+  
+  // Auto-refresh timer
+  private refreshTimer: any;
+  private readonly REFRESH_INTERVAL = 10000; // 10 seconds
+  
   constructor(
     private authService: AuthService,
     private router: Router,
@@ -62,7 +73,8 @@ export class DashboardComponent implements OnInit {
     private http: HttpClient,
     private vehicleService: VehicleService,
     private bookingService: BookingService,
-    private parkingLocationService: ParkingLocationService
+    private parkingLocationService: ParkingLocationService,
+    private modalService: NgbModal
   ) {
     // Attempt to validate token immediately
     this.validateToken();
@@ -83,6 +95,9 @@ export class DashboardComponent implements OnInit {
     
     // Check for bookingSuccess query param to immediately refresh
     const bookingSuccess = this.route.snapshot.queryParamMap.get('booking_success');
+    // Check for booking_id query param to show booking details modal
+    const bookingId = this.route.snapshot.queryParamMap.get('booking_id');
+    
     if (bookingSuccess === 'true') {
       console.log('Detected booking_success parameter, ensuring fresh data load');
     }
@@ -109,6 +124,11 @@ export class DashboardComponent implements OnInit {
             next: (user) => {
               this.user = user;
               this.continueInitialization(idParam, bookingSuccess === 'true');
+              
+              // Show booking details if requested
+              if (bookingId) {
+                setTimeout(() => this.viewBookingDetails(bookingId), 500);
+              }
             },
             error: (error) => {
               console.error('Failed to fetch user data', error);
@@ -118,6 +138,11 @@ export class DashboardComponent implements OnInit {
           });
         } else {
           this.continueInitialization(idParam, bookingSuccess === 'true');
+          
+          // Show booking details if requested
+          if (bookingId) {
+            setTimeout(() => this.viewBookingDetails(bookingId), 500);
+          }
         }
       });
     });
@@ -169,6 +194,9 @@ export class DashboardComponent implements OnInit {
   fetchDashboardData(forceRefresh: boolean = false) {
     console.log('Fetching dashboard data, forceRefresh =', forceRefresh);
     this.isLoading = true;
+    
+    // Clear any existing refresh timer
+    this.clearRefreshTimer();
     
     // Check if forceRefresh or it's been more than 30 seconds since last refresh
     const lastRefresh = localStorage.getItem('dashboard_last_refresh');
@@ -266,6 +294,9 @@ export class DashboardComponent implements OnInit {
         
         // Load location names for the bookings
         this.loadLocationNames(this.allBookings);
+        
+        // Set up refresh timer to check for status changes
+        this.setupRefreshTimer();
       },
       error: (error) => {
         console.error('Failed to load dashboard data', error);
@@ -276,6 +307,9 @@ export class DashboardComponent implements OnInit {
           this.allBookings = cachedBookings;
           this.updateBookingSummary(cachedBookings);
           this.loadLocationNames(cachedBookings);
+          
+          // Also set up refresh timer after error
+          this.setupRefreshTimer();
         } else {
           this.isLoading = false;
         }
@@ -463,8 +497,8 @@ export class DashboardComponent implements OnInit {
         vehicleMap[vehicle.id?.toString()] = `${vehicle.number_plate} (${vehicle.brand} ${vehicle.model})`;
       });
       
-      // Transform bookings to display format
-      this.recentBookings = bookings.map(booking => {
+      // Transform all bookings to display format (for use in all bookings view later)
+      const allProcessedBookings = bookings.map(booking => {
         try {
           // Try to get location name from the booking object first, then fallback to the map
           let locationName = 'Unknown Location';
@@ -515,8 +549,19 @@ export class DashboardComponent implements OnInit {
         }
       }).filter(booking => booking !== null) as BookingDisplay[];
       
+      // Store all processed bookings in localStorage for use in all bookings page
+      try {
+        localStorage.setItem('all_processed_bookings', JSON.stringify(allProcessedBookings));
+      } catch (err) {
+        console.error('Error storing processed bookings in localStorage:', err);
+      }
+      
       // Sort bookings by entry time (newest first)
-      this.recentBookings.sort((a, b) => b.entry_time.getTime() - a.entry_time.getTime());
+      allProcessedBookings.sort((a, b) => b.entry_time.getTime() - a.entry_time.getTime());
+      
+      // Limit dashboard to show only the 3 most recent bookings
+      this.recentBookings = allProcessedBookings.slice(0, 3);
+      
     } catch (err) {
       console.error('Error in processBookingsWithVehicles:', err);
     } finally {
@@ -608,5 +653,144 @@ export class DashboardComponent implements OnInit {
   // Handle tab change
   onTabChange(tabId: number) {
     this.activeTab = tabId;
+  }
+
+  // View booking details
+  viewBookingDetails(bookingId: string): void {
+    console.log('Viewing booking details for ID:', bookingId);
+    this.isLoadingBookingDetails = true;
+    this.selectedBooking = null;
+    
+    // Clear any query parameters to avoid duplicate modal opens on page reload
+    if (this.route.snapshot.queryParamMap.has('booking_id')) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {},
+        replaceUrl: true
+      });
+    }
+    
+    // Open the modal
+    const modalRef: NgbModalRef = this.modalService.open(this.bookingDetailsModal, {
+      centered: true,
+      size: 'lg',
+      backdrop: 'static'
+    });
+    
+    // Fetch booking details
+    this.bookingService.getBookingDetails(bookingId).subscribe({
+      next: (booking) => {
+        console.log('Booking details loaded:', booking);
+        
+        // Process booking data to ensure proper structure
+        if (booking) {
+          // Handle parking_slot vs parking_slot_id scenario
+          if (booking.parking_slot_id && !booking.parking_slot) {
+            // If we have only the ID but not the object, try to get slot details from the booking
+            booking.parking_slot = {
+              id: booking.parking_slot_id,
+              slot_number: booking.slot_number || `Slot #${booking.parking_slot_id}`,
+              vehicle_type: booking.vehicle?.type || (booking.vehicle_id ? 'Vehicle' : 'Unknown')
+            };
+          }
+          
+          // Ensure we have a parking location object
+          if (booking.parking_location_id && !booking.parking_location) {
+            booking.parking_location = {
+              id: booking.parking_location_id,
+              name: this.locationMap[booking.parking_location_id] || 'Parking Location'
+            };
+          }
+        }
+        
+        this.selectedBooking = booking;
+        this.isLoadingBookingDetails = false;
+      },
+      error: (error) => {
+        console.error('Error loading booking details:', error);
+        this.isLoadingBookingDetails = false;
+        this.selectedBooking = { error: 'Failed to load booking details' };
+        
+        // Close modal automatically if there's an error
+        setTimeout(() => modalRef.close(), 2000);
+      }
+    });
+  }
+
+  // Cancel booking from the modal
+  cancelBookingFromModal(bookingId: string): void {
+    console.log('Cancelling booking from modal:', bookingId);
+    this.cancelBooking(bookingId);
+    
+    // Close the modal after cancellation
+    if (this.bookingDetailsModal) {
+      this.modalService.dismissAll();
+    }
+  }
+
+  // Set up a timer to refresh the dashboard data periodically
+  private setupRefreshTimer(): void {
+    this.clearRefreshTimer();
+    this.refreshTimer = setInterval(() => {
+      console.log('Auto-refresh timer triggered');
+      
+      // Only refetch if we're not already loading
+      if (!this.isLoading) {
+        this.bookingService.getUserBookings().pipe(
+          catchError(err => {
+            console.error('Error in auto-refresh bookings:', err);
+            return of([]);
+          })
+        ).subscribe(bookings => {
+          if (bookings && bookings.length > 0) {
+            console.log('Auto-refresh: got updated bookings');
+            
+            // Check if any booking status has changed
+            const hasStatusChanges = this.hasBookingStatusChanges(this.allBookings, bookings);
+            
+            if (hasStatusChanges) {
+              console.log('Auto-refresh: detected booking status changes, updating UI');
+              this.allBookings = bookings;
+              this.updateBookingSummary(bookings);
+              this.processBookingsWithVehicles(bookings);
+            } else {
+              console.log('Auto-refresh: no status changes detected');
+            }
+          }
+        });
+      }
+    }, this.REFRESH_INTERVAL);
+  }
+  
+  private clearRefreshTimer(): void {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+  }
+  
+  private hasBookingStatusChanges(oldBookings: any[], newBookings: any[]): boolean {
+    if (!oldBookings || !newBookings) return false;
+    
+    // Create a map of old bookings by ID for easy lookup
+    const oldBookingsMap = new Map();
+    oldBookings.forEach(booking => {
+      oldBookingsMap.set(booking.id.toString(), booking.status);
+    });
+    
+    // Check if any new booking has a different status
+    for (const newBooking of newBookings) {
+      const oldStatus = oldBookingsMap.get(newBooking.id.toString());
+      if (oldStatus && oldStatus !== newBooking.status) {
+        console.log(`Booking #${newBooking.id} status changed: ${oldStatus} -> ${newBooking.status}`);
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  ngOnDestroy(): void {
+    this.clearRefreshTimer();
   }
 } 
