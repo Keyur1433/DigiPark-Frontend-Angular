@@ -1,0 +1,247 @@
+<div class="container-fluid mt-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <h2>Bookings Management</h2>
+        <button class="btn btn-outline-primary" [routerLink]="['/owner', userId, 'dashboard']">
+          <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error message -->
+  <div *ngIf="errorMessage" class="alert alert-danger mb-4">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Filters & Actions -->
+  <div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+      <h6 class="m-0 font-weight-bold text-primary">Filter Bookings</h6>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label for="statusFilter" class="form-label">Status</label>
+          <select id="statusFilter" class="form-select" [(ngModel)]="statusFilter">
+            <option value="all">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="searchTerm" class="form-label">Search</label>
+          <input type="text" id="searchTerm" class="form-control" [(ngModel)]="searchTerm" 
+                placeholder="Search by user name, vehicle, or booking ID">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <div class="d-grid gap-2 w-100">
+            <button class="btn btn-primary" (click)="applyFilters()">
+              <i class="fas fa-filter me-1"></i> Apply Filters
+            </button>
+            <button class="btn btn-outline-secondary" (click)="resetFilters()">
+              <i class="fas fa-undo me-1"></i> Reset
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading bookings...</p>
+  </div>
+
+  <!-- Bookings Table -->
+  <div *ngIf="!isLoading && bookings.length > 0" class="card shadow mb-4">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary">All Bookings</h6>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>User</th>
+              <th>Vehicle</th>
+              <th>Parking Location</th>
+              <th>Check-in Time</th>
+              <th>Check-out Time</th>
+              <th>Status</th>
+              <th>Amount</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let booking of bookings">
+              <td>{{ booking.id }}</td>
+              <td>
+                {{ booking.user.first_name }} {{ booking.user.last_name }}
+                <br>
+                <small class="text-muted">{{ booking.user.contact_number }}</small>
+              </td>
+              <td>
+                {{ booking.vehicle.brand }} {{ booking.vehicle.model }}
+                <br>
+                <small class="text-muted">{{ booking.vehicle.number_plate }}</small>
+              </td>
+              <td>{{ booking.parking_location.name }}</td>
+              <td>{{ formatDate(booking.check_in_time) }}</td>
+              <td>{{ formatDate(booking.check_out_time) }}</td>
+              <td>
+                <span class="badge rounded-pill {{ getStatusClass(booking.status) }}">
+                  {{ booking.status | titlecase }}
+                </span>
+              </td>
+              <td>₹{{ booking.amount }}</td>
+              <td>
+                <button class="btn btn-sm btn-info mb-1" (click)="viewBookingDetails(booking, detailsModal)">
+                  <i class="fas fa-eye"></i> View
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div *ngIf="pagination && pagination.last_page > 1" class="d-flex justify-content-center mt-4">
+        <nav>
+          <ul class="pagination">
+            <li class="page-item" [class.disabled]="currentPage === 1">
+              <a class="page-link" href="javascript:void(0)" (click)="changePage(1)">First</a>
+            </li>
+            <li class="page-item" [class.disabled]="currentPage === 1">
+              <a class="page-link" href="javascript:void(0)" (click)="changePage(currentPage - 1)">Previous</a>
+            </li>
+            
+            <ng-container *ngFor="let page of [].constructor(pagination.last_page); let i = index">
+              <li class="page-item" [class.active]="currentPage === i + 1" *ngIf="i + 1 >= currentPage - 2 && i + 1 <= currentPage + 2">
+                <a class="page-link" href="javascript:void(0)" (click)="changePage(i + 1)">{{ i + 1 }}</a>
+              </li>
+            </ng-container>
+            
+            <li class="page-item" [class.disabled]="currentPage === pagination.last_page">
+              <a class="page-link" href="javascript:void(0)" (click)="changePage(currentPage + 1)">Next</a>
+            </li>
+            <li class="page-item" [class.disabled]="currentPage === pagination.last_page">
+              <a class="page-link" href="javascript:void(0)" (click)="changePage(pagination.last_page)">Last</a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Bookings Message -->
+  <div *ngIf="!isLoading && bookings.length === 0" class="card shadow mb-4">
+    <div class="card-body py-5 text-center">
+      <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+      <h4>No Bookings Found</h4>
+      <p class="text-muted">No bookings match your current filters.</p>
+      <button class="btn btn-primary mt-3" (click)="resetFilters()">
+        <i class="fas fa-undo me-1"></i> Reset Filters
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Booking Details Modal -->
+<ng-template #detailsModal let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title">Booking Details</h4>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <!-- Loading state -->
+    <div *ngIf="isLoading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3 text-muted">Loading booking details...</p>
+    </div>
+    
+    <!-- Booking details -->
+    <div *ngIf="!isLoading && selectedBooking">
+      <div class="card mb-3">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Booking #{{ selectedBooking.id }}</h5>
+          <span class="badge rounded-pill {{ getStatusClass(selectedBooking.status) }}">
+            {{ selectedBooking.status | titlecase }}
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <h6>User Information</h6>
+              <p class="mb-0"><strong>Name:</strong> {{ selectedBooking.user.first_name }} {{ selectedBooking.user.last_name }}</p>
+              <p class="mb-0"><strong>Contact:</strong> {{ selectedBooking.user.contact_number }}</p>
+              <p class="mb-0"><strong>Email:</strong> {{ selectedBooking.user.email }}</p>
+            </div>
+            <div class="col-md-6">
+              <h6>Vehicle Information</h6>
+              <p class="mb-0"><strong>Type:</strong> {{ selectedBooking.vehicle.type }}</p>
+              <p class="mb-0"><strong>Vehicle:</strong> {{ selectedBooking.vehicle.brand }} {{ selectedBooking.vehicle.model }}</p>
+              <p class="mb-0"><strong>Number Plate:</strong> {{ selectedBooking.vehicle.number_plate }}</p>
+            </div>
+          </div>
+          
+          <hr>
+          
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <h6>Booking Information</h6>
+              <p class="mb-0"><strong>Parking Location:</strong> {{ selectedBooking.parking_location.name }}</p>
+              <p class="mb-0"><strong>Booking Type:</strong> {{ selectedBooking.booking_type }}</p>
+              <p class="mb-0"><strong>Duration:</strong> {{ selectedBooking.duration_hours }} hours</p>
+              <p class="mb-0"><strong>Amount:</strong> ₹{{ selectedBooking.amount }}</p>
+            </div>
+            <div class="col-md-6">
+              <h6>Timing Information</h6>
+              <p class="mb-0"><strong>Check-in Time:</strong> {{ formatDate(selectedBooking.check_in_time) }}</p>
+              <p class="mb-0"><strong>Check-out Time:</strong> {{ formatDate(selectedBooking.check_out_time) }}</p>
+              <p class="mb-0"><strong>Created At:</strong> {{ formatDate(selectedBooking.created_at) }}</p>
+            </div>
+          </div>
+          
+          <hr>
+          
+          <div class="row mb-3" *ngIf="selectedBooking.qr_code">
+            <div class="col-12 text-center">
+              <h6>QR Code</h6>
+              <img [src]="'data:image/png;base64,' + selectedBooking.qr_code" 
+                  alt="Booking QR Code" 
+                  class="img-fluid" 
+                  style="max-width: 200px;">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Action buttons -->
+      <div class="d-flex justify-content-between">
+        <div>
+          <button *ngIf="selectedBooking.status === 'upcoming'" 
+                  class="btn btn-primary me-2"
+                  (click)="updateBookingStatus(selectedBooking.id, 'active'); modal.close()">
+            Mark as Active
+          </button>
+          <button *ngIf="selectedBooking.status === 'active'" 
+                  class="btn btn-success me-2"
+                  (click)="updateBookingStatus(selectedBooking.id, 'completed'); modal.close()">
+            Mark as Completed
+          </button>
+        </div>
+        <button class="btn btn-secondary" (click)="modal.close()">Close</button>
+      </div>
+    </div>
+  </div>
+</ng-template> 

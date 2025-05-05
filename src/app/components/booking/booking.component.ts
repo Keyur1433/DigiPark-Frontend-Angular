@@ -41,10 +41,16 @@ export class BookingComponent implements OnInit {
   durationHours: number = 1; // Default 1 hour
   currentHourlyRate: number = 0;
 
-  // New properties for slot selection
+  // Booking type
+  isAdvancedBooking: boolean = false;
+
+  // Date and time properties
   bookingDate: string = '';
   startTime: string = '';
   endTime: string = '';
+  timeSlots: string[] = [];
+  minDate: string = '';
+  minTime: string = '';
   availableSlots: ParkingSlot[] = [];
   selectedSlotId: number | null = null;
   twoWheelerSlots: ParkingSlot[] = [];
@@ -58,6 +64,10 @@ export class BookingComponent implements OnInit {
   errorMessage: string | null = null;
   successMessage: string | null = null;
 
+  // Add property to store date-specific availability data
+  dateAvailability: any = null;
+  isLoadingDateAvailability: boolean = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -67,23 +77,40 @@ export class BookingComponent implements OnInit {
     private authService: AuthService,
     private bookingService: BookingService
   ) {
-    // Initialize today's date in YYYY-MM-DD format
-    const today = new Date();
-    this.bookingDate = today.toISOString().split('T')[0];
+    // Initialize dates and times
+    this.initializeDateAndTime();
+  }
+
+  private initializeDateAndTime(): void {
+    const now = new Date();
     
-    // Initialize start time to current hour + 30 minutes, rounded to nearest 30 minutes
-    const currentHour = today.getHours();
-    const currentMinute = today.getMinutes();
-    const roundedMinute = currentMinute < 30 ? 30 : 0;
-    const roundedHour = roundedMinute === 0 && currentMinute >= 30 ? currentHour + 1 : currentHour;
+    // Set min date to today
+    this.minDate = now.toISOString().split('T')[0];
+    this.bookingDate = this.minDate;
+
+    // Round current time to next 30-minute slot
+    const minutes = now.getMinutes();
+    const roundedMinutes = minutes < 30 ? 30 : 0;
+    const hoursToAdd = minutes >= 30 ? 1 : 0;
     
-    this.startTime = `${roundedHour.toString().padStart(2, '0')}:${roundedMinute.toString().padStart(2, '0')}`;
+    now.setMinutes(roundedMinutes);
+    now.setHours(now.getHours() + hoursToAdd);
     
-    // Initialize end time to start time + 1 hour
-    const endDate = new Date();
-    endDate.setHours(roundedHour + 1);
-    endDate.setMinutes(roundedMinute);
-    this.endTime = `${endDate.getHours().toString().padStart(2, '0')}:${roundedMinute.toString().padStart(2, '0')}`;
+    // Format time as HH:mm
+    this.minTime = `${now.getHours().toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
+    this.startTime = this.minTime;
+
+    // Generate time slots
+    this.generateTimeSlots();
+  }
+
+  private generateTimeSlots(): void {
+    this.timeSlots = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute of ['00', '30']) {
+        this.timeSlots.push(`${hour.toString().padStart(2, '0')}:${minute}`);
+      }
+    }
   }
 
   ngOnInit(): void {
@@ -93,7 +120,7 @@ export class BookingComponent implements OnInit {
       return;
     }
 
-    // Get parking location id from route params
+    // Get parking location id and booking type from route params
     this.route.paramMap.subscribe(params => {
       this.parkingLocationId = params.get('id');
       if (this.parkingLocationId) {
@@ -103,6 +130,11 @@ export class BookingComponent implements OnInit {
         this.errorMessage = 'Invalid parking location.';
         this.isLoading = false;
       }
+    });
+
+    // Check if this is an advanced booking
+    this.route.queryParamMap.subscribe(params => {
+      this.isAdvancedBooking = params.get('type') === 'advanced';
     });
   }
 
@@ -179,10 +211,13 @@ export class BookingComponent implements OnInit {
     if (this.selectedVehicleId) {
       this.selectedVehicle = this.vehicles.find(v => v.id === Number(this.selectedVehicleId)) || null;
       this.updateHourlyRate();
-      // Reset slot selection when vehicle changes
       this.selectedSlotId = null;
-      // Load available slots if we have all the required information
-      if (this.bookingDate && this.startTime && this.endTime) {
+      
+      // Load available slots if we have all required information for advanced booking
+      if (this.isAdvancedBooking && this.bookingDate && this.startTime && this.endTime) {
+        this.loadAvailableSlots();
+      } else if (!this.isAdvancedBooking) {
+        // For check-in, just load slots based on duration
         this.loadAvailableSlots();
       }
     } else {
@@ -214,45 +249,86 @@ export class BookingComponent implements OnInit {
     return this.currentHourlyRate * this.durationHours;
   }
 
-  // Handle changes in duration
+  // Handle changes in duration (for check-in booking)
   onDurationChange(): void {
-    if (this.durationHours && this.startTime) {
-      // Update end time based on duration
-      const [hours, minutes] = this.startTime.split(':').map(Number);
-      const startDate = new Date();
-      startDate.setHours(hours, minutes, 0, 0);
+    if (!this.isAdvancedBooking && this.durationHours) {
+      const now = new Date();
+      const startMinutes = now.getMinutes();
+      const roundedStartMinutes = startMinutes < 30 ? 30 : 0;
+      const hoursToAdd = startMinutes >= 30 ? 1 : 0;
       
-      // Calculate end time by adding duration hours
-      const endDate = new Date(startDate.getTime() + (this.durationHours * 60 * 60 * 1000));
-      const endHours = endDate.getHours().toString().padStart(2, '0');
-      const endMinutes = endDate.getMinutes().toString().padStart(2, '0');
+      now.setMinutes(roundedStartMinutes);
+      now.setHours(now.getHours() + hoursToAdd);
       
-      this.endTime = `${endHours}:${endMinutes}`;
+      // Set start time
+      this.startTime = `${now.getHours().toString().padStart(2, '0')}:${roundedStartMinutes.toString().padStart(2, '0')}`;
       
-      // Reload available slots if we have all the required information
-      if (this.bookingDate && this.selectedVehicle) {
+      // Calculate end time
+      const endDate = new Date(now.getTime() + (this.durationHours * 60 * 60 * 1000));
+      
+      // Check if booking crosses midnight
+      if (endDate.getDate() !== now.getDate()) {
+        // Calculate remaining hours until midnight
+        const midnight = new Date(now);
+        midnight.setHours(24, 0, 0, 0);
+        const hoursUntilMidnight = (midnight.getTime() - now.getTime()) / (1000 * 60 * 60);
+        
+        this.errorMessage = `Your booking duration crosses into the next day. Please make two separate bookings:
+          1. First booking from ${this.startTime} to 00:00 (${Math.floor(hoursUntilMidnight)} hours)
+          2. Second booking from 00:00 to ${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')} (${this.durationHours - Math.floor(hoursUntilMidnight)} hours)`;
+        
+        // Reset duration to maximum possible for current day
+        this.durationHours = Math.floor(hoursUntilMidnight);
+        
+        // Update end time to midnight
+        this.endTime = '00:00';
+      } else {
+        this.errorMessage = null;
+        this.endTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+      }
+      
+      if (this.selectedVehicle) {
         this.loadAvailableSlots();
       }
     }
   }
 
-  // Handle changes in start time
+  // Handle changes in start time (for advanced booking)
   onStartTimeChange(): void {
-    if (this.startTime && this.durationHours) {
-      // Update end time based on start time and duration
+    if (this.isAdvancedBooking && this.startTime) {
       const [hours, minutes] = this.startTime.split(':').map(Number);
       const startDate = new Date();
       startDate.setHours(hours, minutes, 0, 0);
       
-      // Calculate end time by adding duration hours
-      const endDate = new Date(startDate.getTime() + (this.durationHours * 60 * 60 * 1000));
-      const endHours = endDate.getHours().toString().padStart(2, '0');
-      const endMinutes = endDate.getMinutes().toString().padStart(2, '0');
+      // Calculate end time (default to 1 hour if no duration set)
+      const duration = this.durationHours || 1;
+      const endDate = new Date(startDate.getTime() + (duration * 60 * 60 * 1000));
       
-      this.endTime = `${endHours}:${endMinutes}`;
+      this.endTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
       
-      // Reload available slots if we have all the required information
-      if (this.bookingDate && this.selectedVehicle) {
+      if (this.selectedVehicle && this.bookingDate) {
+        this.loadAvailableSlots();
+      }
+    }
+  }
+
+  // Handle changes in end time (for advanced booking)
+  onEndTimeChange(): void {
+    if (this.isAdvancedBooking && this.startTime && this.endTime) {
+      const [startHours, startMinutes] = this.startTime.split(':').map(Number);
+      const [endHours, endMinutes] = this.endTime.split(':').map(Number);
+      
+      const startDate = new Date();
+      startDate.setHours(startHours, startMinutes, 0, 0);
+      
+      const endDate = new Date();
+      endDate.setHours(endHours, endMinutes, 0, 0);
+      
+      // Calculate duration in hours
+      const durationMs = endDate.getTime() - startDate.getTime();
+      this.durationHours = durationMs / (1000 * 60 * 60);
+      
+      if (this.selectedVehicle && this.bookingDate) {
         this.loadAvailableSlots();
       }
     }
@@ -260,7 +336,7 @@ export class BookingComponent implements OnInit {
 
   // Load available slots for the selected date, time range, and vehicle type
   loadAvailableSlots(): void {
-    if (!this.parkingLocationId || !this.bookingDate || !this.startTime || !this.endTime || !this.selectedVehicle) {
+    if (!this.parkingLocationId || !this.startTime || !this.endTime || !this.selectedVehicle) {
       return;
     }
 
@@ -269,14 +345,15 @@ export class BookingComponent implements OnInit {
     this.selectedSlotId = null;
     this.showSlotSelection = false;
 
-    const vehicleType = this.selectedVehicle.type;
+    // For check-in bookings, use today's date
+    const bookingDate = this.isAdvancedBooking ? this.bookingDate : new Date().toISOString().split('T')[0];
 
     this.bookingService.getAvailableSlots(
-      this.parkingLocationId,
-      this.bookingDate,
+      Number(this.parkingLocationId),
+      bookingDate,
       this.startTime,
       this.endTime,
-      vehicleType
+      this.selectedVehicle.type
     ).subscribe({
       next: (response) => {
         this.isLoadingSlots = false;
@@ -289,18 +366,14 @@ export class BookingComponent implements OnInit {
           this.twoWheelerSlots = this.availableSlots.filter(slot => slot.vehicle_type === '2-wheeler');
           this.fourWheelerSlots = this.availableSlots.filter(slot => slot.vehicle_type === '4-wheeler');
           
-          console.log('Available slots loaded:', this.availableSlots.length);
-          console.log('Two-wheeler slots:', this.twoWheelerSlots.length);
-          console.log('Four-wheeler slots:', this.fourWheelerSlots.length);
-          
           this.showSlotSelection = true;
         } else {
-          this.errorMessage = 'Failed to load available slots.';
+          this.errorMessage = 'No slots available for the selected time period.';
         }
       },
       error: (error) => {
         this.isLoadingSlots = false;
-        this.errorMessage = 'Failed to load available slots. Please try again.';
+        this.errorMessage = error.error?.message || 'Failed to load available slots. Please try again.';
       }
     });
   }
@@ -341,137 +414,97 @@ export class BookingComponent implements OnInit {
 
   // Check if form is valid for booking
   isFormValid(): boolean {
-    return !!(
-      this.selectedVehicleId && 
-      this.bookingDate && 
-      this.startTime && 
-      this.endTime && 
-      this.durationHours &&
-      this.selectedSlotId
-    );
+    if (!this.selectedVehicleId || !this.selectedSlotId) {
+      return false;
+    }
+
+    if (this.isAdvancedBooking) {
+      return !!(this.bookingDate && this.startTime && this.endTime);
+    }
+
+    return this.durationHours > 0;
   }
 
   // Book the parking slot
   bookParking(): void {
     if (!this.isFormValid()) {
-      this.errorMessage = 'Please complete all required fields and select a parking slot.';
+      this.errorMessage = 'Please fill in all required fields.';
       return;
     }
 
     this.isBooking = true;
     this.errorMessage = null;
-    this.successMessage = null;
 
-    // Calculate duration in hours based on start and end time
-    const [startHours, startMinutes] = this.startTime.split(':').map(Number);
-    const [endHours, endMinutes] = this.endTime.split(':').map(Number);
-    const startTimeMinutes = startHours * 60 + startMinutes;
-    const endTimeMinutes = endHours * 60 + endMinutes;
-    const durationMinutes = endTimeMinutes - startTimeMinutes;
-    const calculatedDuration = durationMinutes / 60;
-
-    // Prepare booking data in the format expected by the backend API
-    const bookingData = {
-      parking_location_id: parseInt(this.parkingLocationId!, 10),
-      vehicle_id: parseInt(this.selectedVehicleId!, 10),
-      parking_slot_id: this.selectedSlotId,
-      duration_hours: calculatedDuration,
-      booking_date: this.bookingDate,
+    const bookingData = this.isAdvancedBooking ? {
+      parking_location_id: Number(this.parkingLocationId),
+      vehicle_id: Number(this.selectedVehicleId),
+      parking_slot_id: Number(this.selectedSlotId),
+      date: this.bookingDate,
       start_time: this.startTime,
-      end_time: this.endTime,
-      amount: this.getTotalAmount()
+      end_time: this.endTime
+    } : {
+      parking_location_id: Number(this.parkingLocationId),
+      vehicle_id: Number(this.selectedVehicleId),
+      parking_slot_id: Number(this.selectedSlotId),
+      duration_hours: this.durationHours
     };
 
-    console.log('Sending booking request with slot selection:', bookingData);
+    const bookingMethod = this.isAdvancedBooking ? 
+      this.bookingService.createAdvancedBooking(bookingData) :
+      this.bookingService.createBooking(bookingData);
 
-    // Send booking request
-    this.bookingService.createBooking(bookingData)
-      .subscribe({
-        next: (response: any) => {
-          console.log('Booking response received:', response);
+    bookingMethod.subscribe({
+      next: (response: { booking: { id: number } }) => {
+        this.successMessage = 'Booking created successfully!';
           this.isBooking = false;
           
-          if (response && response.success) {
-            this.successMessage = response.message || 'Booking successful! Your parking is confirmed.';
-          } else if (response && response.message) {
-            this.successMessage = response.message;
-          } else {
-          this.successMessage = 'Booking successful! Your parking is confirmed.';
-          }
-          
-          // Store the booking ID in localStorage to ensure it can be referenced later
-          try {
-            if (response && response.booking && response.booking.id) {
-              const bookingId = response.booking.id.toString();
-              console.log('Storing booking ID in localStorage:', bookingId);
-              
-              // Store as a recent booking
-              const recentBookings = JSON.parse(localStorage.getItem('recent_bookings') || '[]');
-              recentBookings.unshift(bookingId);
-              localStorage.setItem('recent_bookings', JSON.stringify(recentBookings.slice(0, 10)));
-              
-              // Also store the full booking data if available
-              if (response.booking) {
-                try {
-                  const bookingsCache = JSON.parse(localStorage.getItem('bookings_cache') || '{}');
-                  bookingsCache[bookingId] = {
-                    data: response.booking,
-                    timestamp: Date.now()
-                  };
-                  localStorage.setItem('bookings_cache', JSON.stringify(bookingsCache));
-                  console.log('Booking data cached in localStorage');
-                } catch (e) {
-                  console.error('Error caching booking data:', e);
-                }
-              }
-            }
-          } catch (e) {
-            console.error('Error storing recent booking', e);
-          }
-          
-          // Ensure we have fresh user data before navigating
-          this.authService.refreshAuthState().subscribe({
-            next: (isAuthenticated) => {
-              if (isAuthenticated) {
-                console.log('Auth state refreshed, user is authenticated');
-                this.authService.fetchCurrentUser().subscribe({
-                  next: (user) => {
-                    if (user) {
-                      const userId = user.id;
-                      // Navigate to user dashboard after a short delay
-                      setTimeout(() => {
-                        this.router.navigate(['/user', userId, 'dashboard']);
-                      }, 2000);
-                    } else {
-                      console.error('User not found after refresh');
-                      this.router.navigate(['/']);
-                    }
-                  },
-                  error: (error) => {
-                    console.error('Error fetching user after booking:', error);
-                    this.router.navigate(['/']);
-                  }
-                });
-              } else {
-                console.error('User not authenticated after refresh');
-                this.router.navigate(['/']);
-              }
-            },
-            error: (error) => {
-              console.error('Error refreshing auth state after booking:', error);
-              this.router.navigate(['/']);
-            }
+        // Redirect to dashboard with success message
+        setTimeout(() => {
+          const userId = this.authService.getUserId();
+          this.router.navigate(['/user', userId, 'dashboard'], {
+            queryParams: { booking_success: 'true', booking_id: response.booking.id }
           });
-        },
-        error: (error) => {
-          this.isBooking = false;
-          console.error('Booking error:', error);
-          
-          if (error.error && error.error.message) {
-            this.errorMessage = error.error.message;
-          } else {
-            this.errorMessage = 'Booking failed. Please try again.';
+        }, 1500);
+      },
+      error: (error: { error: { message: string } }) => {
+        this.errorMessage = error.error.message || 'Failed to create booking. Please try again.';
+        this.isBooking = false;
+      }
+    });
+  }
+
+  // Handle date change for advanced booking
+  onDateChange(): void {
+    if (this.isAdvancedBooking && this.bookingDate && this.parkingLocationId) {
+      this.loadSlotAvailabilityForDate();
+      
+      // Reset slot selection
+      this.selectedSlotId = null;
+      
+      // If we have all required information, load available slots
+      if (this.startTime && this.endTime && this.selectedVehicle) {
+        this.loadAvailableSlots();
+      }
+    }
+  }
+
+  // Load slot availability for the selected date
+  loadSlotAvailabilityForDate(): void {
+    if (!this.parkingLocationId || !this.bookingDate) return;
+    
+    this.isLoadingDateAvailability = true;
+    this.dateAvailability = null;
+    
+    this.bookingService.getSlotAvailabilityByDate(Number(this.parkingLocationId), this.bookingDate)
+      .subscribe({
+        next: (response) => {
+          this.isLoadingDateAvailability = false;
+          if (response && response.availability) {
+            this.dateAvailability = response.availability;
           }
+        },
+        error: () => {
+          this.isLoadingDateAvailability = false;
         }
       });
   }

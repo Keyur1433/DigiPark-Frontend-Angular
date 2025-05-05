@@ -1,12 +1,13 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { Component, OnInit, ViewChild, PLATFORM_ID, Inject, OnDestroy } from '@angular/core';
+import { CommonModule, DatePipe, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NgbNavModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { BookingService } from '../../../services/booking.service';
 import { AuthService } from '../../../services/auth.service';
 import { ToastrService } from 'ngx-toastr';
 import { formatDate } from '@angular/common';
-import { catchError, of } from 'rxjs';
+import { catchError, of, Subscription } from 'rxjs';
+import { BookingStatusService } from '../../../services/booking-status.service';
 
 interface BookingDisplay {
   id: string;
@@ -27,7 +28,7 @@ interface BookingDisplay {
   templateUrl: './all-bookings.component.html',
   styleUrls: ['./all-bookings.component.css']
 })
-export class AllBookingsComponent implements OnInit {
+export class AllBookingsComponent implements OnInit, OnDestroy {
   @ViewChild('bookingDetailsModal') bookingDetailsModal: any;
   
   userId: number = 0; // Default value
@@ -45,7 +46,10 @@ export class AllBookingsComponent implements OnInit {
 
   // Auto-refresh timer
   private refreshTimer: any;
-  private readonly REFRESH_INTERVAL = 10000; // 10 seconds
+  private readonly REFRESH_INTERVAL = 30000; // 30 seconds
+  private isBrowser: boolean;
+  private statusSubscription: Subscription | null = null;
+  private lastStatusUpdate: Date | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -53,8 +57,12 @@ export class AllBookingsComponent implements OnInit {
     private bookingService: BookingService,
     private authService: AuthService,
     private toastr: ToastrService,
-    private modalService: NgbModal
-  ) { }
+    private modalService: NgbModal,
+    private bookingStatusService: BookingStatusService,
+    @Inject(PLATFORM_ID) platformId: Object
+  ) { 
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   ngOnInit(): void {
     // Get userId from route params
@@ -68,11 +76,18 @@ export class AllBookingsComponent implements OnInit {
       }
       this.loadBookings();
     });
+    
+    // Subscribe to booking status updates
+    this.subscribeToStatusUpdates();
   }
 
   ngOnDestroy(): void {
-    // Clear auto-refresh timer when component is destroyed
+    // Clear auto-refresh timer and subscription when component is destroyed
     this.clearRefreshTimer();
+    if (this.statusSubscription) {
+      this.statusSubscription.unsubscribe();
+      this.statusSubscription = null;
+    }
   }
 
   loadBookings(): void {
@@ -81,21 +96,23 @@ export class AllBookingsComponent implements OnInit {
     // Clear any existing refresh timer
     this.clearRefreshTimer();
     
-    // Try to get bookings from localStorage first (might have been cached by dashboard)
-    try {
-      const cachedBookings = localStorage.getItem('all_processed_bookings');
-      if (cachedBookings) {
-        const bookings = JSON.parse(cachedBookings);
-        if (Array.isArray(bookings) && bookings.length > 0) {
-          console.log('Using cached bookings from localStorage');
-          this.processBookings(bookings);
-          // Set up auto-refresh after loading cached bookings
-          this.setupRefreshTimer();
-          return;
+    // Only try localStorage in browser environments
+    if (this.isBrowser) {
+      try {
+        const cachedBookings = localStorage.getItem('all_processed_bookings');
+        if (cachedBookings) {
+          const bookings = JSON.parse(cachedBookings);
+          if (Array.isArray(bookings) && bookings.length > 0) {
+            console.log('Using cached bookings from localStorage');
+            this.processBookings(bookings);
+            // Set up auto-refresh after loading cached bookings
+            this.setupRefreshTimer();
+            return;
+          }
         }
+      } catch (e) {
+        console.error('Error parsing cached bookings:', e);
       }
-    } catch (e) {
-      console.error('Error parsing cached bookings:', e);
     }
     
     // If no cached bookings, fetch from API
@@ -117,24 +134,50 @@ export class AllBookingsComponent implements OnInit {
   processBookings(bookings: any[]): void {
     // Process the bookings if they're not already in the expected format
     if (bookings.length > 0 && !bookings[0].hasOwnProperty('location')) {
-      // Need to process from API format to display format
-      // This would ideally call a shared service to process bookings consistently
       console.log('Processing bookings to display format');
-      // Use simple format for now
-      this.allBookings = bookings.map(booking => ({
-        id: booking.id?.toString() || '',
-        location: booking.parking_location?.name || 'Unknown Location',
-        vehicle: booking.vehicle?.number_plate || 'Unknown Vehicle',
-        entry_time: new Date(booking.check_in_time || booking.start_time || new Date()),
-        exit_time: booking.check_out_time ? new Date(booking.check_out_time) : null,
-        status: this.mapBookingStatus(booking.status),
-        amount: parseFloat(booking.amount || '0'),
-        vehicle_id: booking.vehicle_id?.toString() || '',
-        parking_location_id: booking.parking_location_id?.toString() || ''
-      }));
+      
+      // Check if bookings should be auto-completed based on current time
+      const now = new Date();
+      
+      this.allBookings = bookings.map(booking => {
+        // Calculate if a booking should be auto-completed
+        let bookingStatus = booking.status;
+        const exitTime = booking.check_out_time ? new Date(booking.check_out_time) : null;
+        
+        // If exitTime exists and is in the past, mark as completed
+        if (exitTime && now > exitTime && (bookingStatus === 'active' || bookingStatus === 'checked_in')) {
+          console.log(`Auto-completing booking ${booking.id} - Exit time ${exitTime} is in the past`);
+          bookingStatus = 'completed';
+          
+          // Request backend to update the status if needed
+          this.bookingService.markBookingAsCompleted(booking.id)
+            .subscribe(response => console.log(`Backend updated booking ${booking.id} to completed`));
+        }
+        
+        return {
+          id: booking.id?.toString() || '',
+          location: booking.parking_location?.name || 'Unknown Location',
+          vehicle: booking.vehicle?.number_plate || 'Unknown Vehicle',
+          entry_time: new Date(booking.check_in_time || booking.start_time || new Date()),
+          exit_time: exitTime,
+          status: this.mapBookingStatus(bookingStatus), // Use potentially updated status
+          amount: parseFloat(booking.amount || '0'),
+          vehicle_id: booking.vehicle_id?.toString() || '',
+          parking_location_id: booking.parking_location_id?.toString() || ''
+        };
+      });
     } else {
       // Already in the right format
       this.allBookings = bookings;
+    }
+    
+    // Update localStorage cache for later use
+    if (this.isBrowser) {
+      try {
+        localStorage.setItem('all_processed_bookings', JSON.stringify(this.allBookings));
+      } catch (e) {
+        console.error('Error caching bookings:', e);
+      }
     }
     
     this.sortBookingsByStatus();
@@ -275,33 +318,36 @@ export class AllBookingsComponent implements OnInit {
 
   // Set up auto-refresh timer
   private setupRefreshTimer(): void {
-    this.clearRefreshTimer();
-    this.refreshTimer = setInterval(() => {
-      console.log('All bookings: Auto-refresh timer triggered');
-      // Only reload if we're not already loading
-      if (!this.isLoading) {
-        this.bookingService.getUserBookings().pipe(
-          catchError(err => {
-            console.error('Error in auto-refresh bookings:', err);
-            return of([]);
-          })
-        ).subscribe(bookings => {
-          if (bookings && bookings.length > 0) {
-            console.log('All bookings: Auto-refresh got updated bookings');
-            
-            // Check if any booking status has changed
-            const hasStatusChanges = this.hasBookingStatusChanges(this.allBookings, bookings);
-            
-            if (hasStatusChanges) {
-              console.log('All bookings: Auto-refresh detected status changes, updating UI');
-              this.processBookings(bookings);
-            } else {
-              console.log('All bookings: Auto-refresh no status changes detected');
+    if (this.isBrowser) {
+      this.clearRefreshTimer(); // Clear any existing timer
+      
+      this.refreshTimer = setInterval(() => {
+        console.log('Auto-refreshing bookings...');
+        
+        // Get fresh bookings from API
+        this.bookingService.getUserBookings()
+          .pipe(
+            catchError(error => {
+              console.error('Error in auto-refresh:', error);
+              return of([]);
+            })
+          )
+          .subscribe(bookings => {
+            if (bookings.length > 0) {
+              // Check if any booking status has changed
+              if (this.hasBookingStatusChanges(this.allBookings, bookings)) {
+                console.log('Booking statuses have changed, updating view...');
+                this.processBookings(bookings);
+                this.toastr.info('Booking information has been updated');
+              } else {
+                console.log('No booking status changes detected');
+              }
             }
-          }
-        });
-      }
-    }, this.REFRESH_INTERVAL);
+          });
+      }, this.REFRESH_INTERVAL);
+      
+      console.log(`Auto-refresh timer set up (every ${this.REFRESH_INTERVAL/1000}s)`);
+    }
   }
   
   // Clear refresh timer
@@ -332,5 +378,29 @@ export class AllBookingsComponent implements OnInit {
     }
     
     return false;
+  }
+
+  subscribeToStatusUpdates(): void {
+    if (this.isBrowser) {
+      this.statusSubscription = this.bookingStatusService.statusUpdates.subscribe(update => {
+        if (update.updatedAt && update.completed > 0) {
+          console.log(`${update.completed} booking(s) were auto-completed: ${update.message}`);
+          this.lastStatusUpdate = update.updatedAt;
+          
+          // Reload bookings when statuses have been updated
+          this.toastr.info(`${update.completed} booking(s) updated to completed status`);
+          this.loadBookings();
+        }
+      });
+    }
+  }
+
+  refreshBookings(): void {
+    // Manually trigger status check and refresh bookings
+    if (this.isBrowser) {
+      this.bookingStatusService.checkAndUpdateStatuses();
+      this.loadBookings();
+      this.toastr.success('Bookings refreshed');
+    }
   }
 } 

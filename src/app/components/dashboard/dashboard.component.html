@@ -137,6 +137,11 @@
                   </div>
                 </div>
                 <div *ngIf="!isLoading">
+                  <div class="d-flex justify-content-end mb-3">
+                    <button class="btn btn-outline-secondary btn-sm" (click)="fetchDashboardData(true)">
+                      <i class="bi bi-arrow-clockwise me-1"></i> Refresh Data
+                    </button>
+                  </div>
                   <div *ngIf="recentBookings.length === 0" class="text-center py-4">
                     <i class="bi bi-calendar-x display-4 text-muted mb-3"></i>
                     <h5>No recent bookings</h5>
@@ -174,10 +179,10 @@
                           </td>
                           <td>₹{{ booking.amount }}</td>
                           <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" (click)="viewBookingDetails(booking.id)">View</button>
-                            <button *ngIf="booking.status === 'upcoming'" 
-                                    class="btn btn-sm btn-outline-danger"
-                                    (click)="cancelBooking(booking.id)">
+                            <button class="btn btn-sm btn-outline-primary me-1"
+                              (click)="viewBookingDetails(booking.id)">View</button>
+                            <button *ngIf="booking.status === 'upcoming'" class="btn btn-sm btn-outline-danger"
+                              (click)="cancelBooking(booking.id)">
                               Cancel
                             </button>
                           </td>
@@ -186,7 +191,8 @@
                     </table>
                   </div>
                   <div *ngIf="recentBookings.length > 0" class="text-center mt-3">
-                    <button class="btn btn-outline-primary" [routerLink]="['/user', userId, 'all-bookings']">View All Bookings</button>
+                    <button class="btn btn-outline-primary" [routerLink]="['/user', userId, 'all-bookings']">View All
+                      Bookings</button>
                   </div>
                 </div>
               </ng-template>
@@ -201,7 +207,8 @@
                       <div class="card mb-4">
                         <div class="card-body">
                           <p class="text-center mb-4">
-                            Use our interactive map and advanced search features to find and book parking spaces near your destination.
+                            Use our interactive map and advanced search features to find and book parking spaces near
+                            your destination.
                           </p>
                           <div class="d-grid gap-2 col-md-6 mx-auto">
                             <a class="btn btn-primary btn-lg" href="/parking-locations">
@@ -243,7 +250,7 @@
       </div>
       <p class="mt-2">Loading booking details...</p>
     </div>
-    
+
     <div *ngIf="!isLoadingBookingDetails && selectedBooking">
       <div class="card mb-3">
         <div class="card-header bg-primary text-white">
@@ -262,7 +269,7 @@
               <h5>₹{{ selectedBooking.amount }}</h5>
             </div>
           </div>
-          
+
           <div class="row mb-3">
             <div class="col-md-6">
               <p class="mb-1"><strong>Booking Date:</strong></p>
@@ -298,11 +305,13 @@
           <div class="row mb-3">
             <div class="col-md-6">
               <p class="mb-1"><strong>Check-in Time:</strong></p>
-              <p>{{ selectedBooking.check_in_time ? (selectedBooking.check_in_time | date: 'medium') : 'Not checked in yet' }}</p>
+              <p>{{ selectedBooking.check_in_time ? (selectedBooking.check_in_time | date: 'medium') : 'Not checked in
+                yet' }}</p>
             </div>
             <div class="col-md-6">
               <p class="mb-1"><strong>Check-out Time:</strong></p>
-              <p>{{ selectedBooking.check_out_time ? (selectedBooking.check_out_time | date: 'medium') : 'Not checked out yet' }}</p>
+              <p>{{ selectedBooking.check_out_time ? (selectedBooking.check_out_time | date: 'medium') : 'Not checked
+                out yet' }}</p>
             </div>
           </div>
 
@@ -313,7 +322,8 @@
             </div>
             <div class="col-md-6">
               <p class="mb-1"><strong>Booking Type:</strong></p>
-              <p>{{ selectedBooking.booking_type === 'check_in' ? 'Instant Check-in' : 'Advance Booking' | titlecase }}</p>
+              <p>{{ selectedBooking.booking_type === 'check_in' ? 'Instant Check-in' : 'Advance Booking' | titlecase }}
+              </p>
             </div>
           </div>
 
@@ -324,35 +334,30 @@
               <p class="mb-1"><strong>Vehicle:</strong></p>
               <p>{{ selectedBooking.vehicle?.number_plate || 'N/A' }}</p>
               <p class="text-muted small" *ngIf="selectedBooking.vehicle">
-                {{ selectedBooking.vehicle?.brand }} {{ selectedBooking.vehicle?.model }} ({{ selectedBooking.vehicle?.type }})
+                {{ selectedBooking.vehicle?.brand }} {{ selectedBooking.vehicle?.model }} ({{
+                selectedBooking.vehicle?.type }})
               </p>
             </div>
             <div class="col-md-6" *ngIf="selectedBooking.qr_code">
               <p class="mb-1"><strong>QR Code:</strong></p>
               <p class="text-muted small">Use this QR code when checking in/out at the parking location</p>
               <div class="text-center">
-                <img 
-                  *ngIf="selectedBooking.qr_code" 
-                  [src]="'data:image/png;base64,' + selectedBooking.qr_code" 
-                  alt="Booking QR Code" 
-                  class="img-fluid" 
-                  style="max-width: 150px;">
+                <img *ngIf="selectedBooking.qr_code" [src]="'data:image/png;base64,' + selectedBooking.qr_code"
+                  alt="Booking QR Code" class="img-fluid" style="max-width: 150px;">
               </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       <!-- Actions -->
       <div class="d-flex justify-content-end">
-        <button 
-          *ngIf="selectedBooking.status === 'upcoming' || selectedBooking.status === 'booked'" 
-          class="btn btn-danger me-2" 
-          (click)="cancelBookingFromModal(selectedBooking.id)">
+        <button *ngIf="selectedBooking.status === 'upcoming' || selectedBooking.status === 'booked'"
+          class="btn btn-danger me-2" (click)="cancelBookingFromModal(selectedBooking.id)">
           Cancel Booking
         </button>
         <button class="btn btn-primary" (click)="modal.close()">Close</button>
       </div>
     </div>
   </div>
-</ng-template> 
+</ng-template>

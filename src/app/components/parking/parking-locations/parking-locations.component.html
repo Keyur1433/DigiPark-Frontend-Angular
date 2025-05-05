@@ -208,11 +208,8 @@
             </span>
           </div>
           <div class="d-flex justify-content-between mt-3">
-            <button class="btn btn-outline-primary" (click)="viewLocationDetails(location)">
+            <button class="btn btn-primary w-100" (click)="viewLocationDetails(location)">
               View Details
-            </button>
-            <button class="btn btn-primary" (click)="goToBooking(location)">
-              Book Now
             </button>
           </div>
         </div>
@@ -295,8 +292,8 @@
           </div>
 
           <div class="d-grid">
-            <button class="btn btn-primary btn-lg" (click)="goToBooking(selectedLocation)">
-              Book Now
+            <button class="btn btn-primary btn-lg" (click)="viewLocationDetails(selectedLocation)">
+              View Details
             </button>
           </div>
         </div>

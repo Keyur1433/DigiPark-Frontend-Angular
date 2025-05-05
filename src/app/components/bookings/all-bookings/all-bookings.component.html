@@ -3,9 +3,14 @@
     <div class="col-12">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>All Bookings</h2>
-        <button class="btn btn-outline-secondary" [routerLink]="['/user', userId, 'dashboard']">
-          <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
-        </button>
+        <div>
+          <button class="btn btn-outline-primary me-2" (click)="refreshBookings()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+          </button>
+          <button class="btn btn-outline-secondary" [routerLink]="['/user', userId, 'dashboard']">
+            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+          </button>
+        </div>
       </div>
 
       <!-- Loading state -->

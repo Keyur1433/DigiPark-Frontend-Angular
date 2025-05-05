@@ -1,0 +1,24 @@
+/* Styles for the owner bookings component */
+
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Custom badge styles */
+.badge {
+  padding: 0.5rem 0.75rem;
+}
+
+/* Status indicator */
+.status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+/* Pagination hover effect */
+.page-link:hover {
+  cursor: pointer;
+} 

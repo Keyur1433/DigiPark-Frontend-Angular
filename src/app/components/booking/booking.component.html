@@ -76,9 +76,10 @@
 
             <!-- Date and Time Selection -->
             <div class="mb-4">
-              <label class="form-label">Select Date and Time</label>
+              <label class="form-label">{{ isAdvancedBooking ? 'Advanced Booking Details' : 'Check-in Details' }}</label>
               <div class="date-time-selector">
-                <div>
+                <!-- Date selection - only for advanced booking -->
+                <div *ngIf="isAdvancedBooking">
                   <label for="bookingDate" class="form-label">Date</label>
                   <input 
                     type="date" 
@@ -87,63 +88,104 @@
                     [(ngModel)]="bookingDate" 
                     name="bookingDate" 
                     required
-                    [min]="bookingDate"
-                    (change)="selectedSlotId = null"
+                    [min]="minDate"
+                    (change)="onDateChange()"
                   >
+                  <!-- Date-specific availability information -->
+                  <div *ngIf="isLoadingDateAvailability" class="text-center mt-2">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <small class="text-muted ms-2">Loading availability...</small>
+                  </div>
+                  <div *ngIf="dateAvailability && !isLoadingDateAvailability" class="mt-2">
+                    <div class="card date-availability-card">
+                      <div class="card-body p-2">
+                        <h6 class="mb-2">Availability for {{bookingDate | date:'mediumDate'}}</h6>
+                        <div *ngFor="let item of dateAvailability" class="d-flex justify-content-between align-items-center mb-1">
+                          <span>{{item.vehicle_type}} Slots:</span>
+                          <span class="badge rounded-pill" 
+                                [ngClass]="{
+                                  'bg-success': item.available_slots > (item.total_slots * 0.5),
+                                  'bg-warning': item.available_slots > 0 && item.available_slots <= (item.total_slots * 0.5),
+                                  'bg-danger': item.available_slots === 0
+                                }">
+                            {{ item.available_slots }} / {{ item.total_slots }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
+
+                <!-- Time selection -->
+                <div *ngIf="isAdvancedBooking">
                   <label for="startTime" class="form-label">Start Time</label>
-                  <input 
-                    type="time" 
-                    class="form-control" 
+                  <select 
+                    class="form-select" 
                     id="startTime" 
                     [(ngModel)]="startTime" 
                     name="startTime" 
                     required
                     (change)="onStartTimeChange()"
                   >
+                    <option value="">Select start time</option>
+                    <option *ngFor="let slot of timeSlots" [value]="slot"
+                            [disabled]="bookingDate === minDate && slot < minTime">
+                      {{ slot }}
+                    </option>
+                  </select>
                 </div>
-                <div>
+
+                <div *ngIf="isAdvancedBooking">
                   <label for="endTime" class="form-label">End Time</label>
-                  <input 
-                    type="time" 
-                    class="form-control" 
+                  <select 
+                    class="form-select" 
                     id="endTime" 
                     [(ngModel)]="endTime" 
                     name="endTime" 
                     required
+                    (change)="onEndTimeChange()"
                     [disabled]="!startTime"
                   >
+                    <option value="">Select end time</option>
+                    <option *ngFor="let slot of timeSlots" [value]="slot"
+                            [disabled]="slot <= startTime">
+                      {{ slot }}
+                    </option>
+                  </select>
                 </div>
-                <div>
+
+                <!-- Duration selection - only for check-in -->
+                <div *ngIf="!isAdvancedBooking">
                   <label for="durationSelect" class="form-label">Duration</label>
-              <select 
-                class="form-select" 
-                id="durationSelect" 
-                [(ngModel)]="durationHours" 
-                name="duration"
-                required
-                (ngModelChange)="onDurationChange()"
-              >
-                <option [ngValue]="0.5">30 minutes</option>
-                <option [ngValue]="1">1 hour</option>
-                <option [ngValue]="1.5">1.5 hours</option>
-                <option [ngValue]="2">2 hours</option>
-                <option [ngValue]="2.5">2.5 hours</option>
-                <option [ngValue]="3">3 hours</option>
-                <option [ngValue]="3.5">3.5 hours</option>
-                <option [ngValue]="4">4 hours</option>
-                <option [ngValue]="4.5">4.5 hours</option>
-                <option [ngValue]="5">5 hours</option>
-                <option [ngValue]="5.5">5.5 hours</option>
-                <option [ngValue]="6">6 hours</option>
-                <option [ngValue]="6.5">6.5 hours</option>
-                <option [ngValue]="7">7 hours</option>
-                <option [ngValue]="7.5">7.5 hours</option>
-                <option [ngValue]="8">8 hours</option>
-                <option [ngValue]="8.5">8.5 hours</option>
-                <option [ngValue]="9">9 hours</option>
-              </select>
+                  <select 
+                    class="form-select" 
+                    id="durationSelect" 
+                    [(ngModel)]="durationHours" 
+                    name="duration"
+                    required
+                    (ngModelChange)="onDurationChange()"
+                  >
+                    <option [ngValue]="0.5">30 minutes</option>
+                    <option [ngValue]="1">1 hour</option>
+                    <option [ngValue]="1.5">1.5 hours</option>
+                    <option [ngValue]="2">2 hours</option>
+                    <option [ngValue]="2.5">2.5 hours</option>
+                    <option [ngValue]="3">3 hours</option>
+                    <option [ngValue]="3.5">3.5 hours</option>
+                    <option [ngValue]="4">4 hours</option>
+                    <option [ngValue]="4.5">4.5 hours</option>
+                    <option [ngValue]="5">5 hours</option>
+                    <option [ngValue]="5.5">5.5 hours</option>
+                    <option [ngValue]="6">6 hours</option>
+                    <option [ngValue]="6.5">6.5 hours</option>
+                    <option [ngValue]="7">7 hours</option>
+                    <option [ngValue]="7.5">7.5 hours</option>
+                    <option [ngValue]="8">8 hours</option>
+                    <option [ngValue]="8.5">8.5 hours</option>
+                    <option [ngValue]="9">9 hours</option>
+                  </select>
                 </div>
               </div>
               <div class="d-grid mt-2">
@@ -151,7 +193,7 @@
                   type="button" 
                   class="btn btn-outline-primary" 
                   (click)="loadAvailableSlots()"
-                  [disabled]="!selectedVehicleId || !bookingDate || !startTime || !endTime">
+                  [disabled]="!selectedVehicleId || (isAdvancedBooking && (!bookingDate || !startTime || !endTime)) || (!isAdvancedBooking && !durationHours)">
                   <i class="bi bi-search me-2"></i>Find Available Slots
                 </button>
               </div>
@@ -248,45 +290,44 @@
                   <strong>Location:</strong> {{ parkingLocation.name }}
                 </p>
                 <p *ngIf="selectedVehicleId" class="mb-1">
-                  <strong>Vehicle:</strong> 
-                  {{ getSelectedVehicleName() }}
+                  <strong>Vehicle:</strong> {{ getSelectedVehicleName() }}
                 </p>
-                <p *ngIf="bookingDate" class="mb-1">
-                  <strong>Date:</strong> {{ bookingDate }}
+                <p *ngIf="isAdvancedBooking && bookingDate" class="mb-1">
+                  <strong>Date:</strong> {{ bookingDate | date:'mediumDate' }}
                 </p>
-                <p *ngIf="startTime && endTime" class="mb-1">
-                  <strong>Time:</strong> {{ startTime }} - {{ endTime }}
+                <p *ngIf="startTime" class="mb-1">
+                  <strong>Start Time:</strong> {{ startTime }}
                 </p>
-                <p *ngIf="selectedSlotId && availableSlots.length > 0" class="mb-1">
-                  <strong>Selected Slot:</strong>
-                  {{ getSelectedSlotNumber() }}
+                <p *ngIf="endTime" class="mb-1">
+                  <strong>End Time:</strong> {{ endTime }}
+                </p>
+                <p *ngIf="durationHours" class="mb-1">
+                  <strong>Duration:</strong> {{ durationHours }} hour(s)
+                </p>
+                <p *ngIf="selectedSlotId" class="mb-1">
+                  <strong>Selected Slot:</strong> {{ getSelectedSlotNumber() }}
                 </p>
                 <p class="mb-1">
-                  <strong>Duration:</strong> {{ durationHours }} hours
-                </p>
-                <p class="mb-0">
                   <strong>Rate:</strong> ₹{{ currentHourlyRate }}/hour
                 </p>
-                <hr>
-                <p class="mb-0 d-flex justify-content-between">
-                  <strong>Total Amount:</strong> 
-                  <span class="text-primary fw-bold">
-                    ₹{{ getTotalAmount().toFixed(2) }}
-                  </span>
+                <p class="mb-0">
+                  <strong>Total Amount:</strong> ₹{{ getTotalAmount() }}
                 </p>
               </div>
             </div>
 
-            <!-- Submit button -->
-            <div class="d-grid">
+            <!-- Action buttons -->
+            <div class="d-grid gap-2">
               <button 
                 type="submit" 
-                class="btn btn-primary btn-lg" 
-                [disabled]="isBooking || !isFormValid()"
+                class="btn btn-primary" 
+                [disabled]="!isFormValid() || isBooking"
               >
-                <span *ngIf="isBooking" class="spinner-border spinner-border-sm me-2"></span>
-                <i *ngIf="!isBooking" class="bi bi-check-circle me-2"></i>
-                {{ isBooking ? 'Processing...' : 'Confirm Booking' }}
+                <span *ngIf="isBooking" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                {{ isAdvancedBooking ? 'Confirm Advanced Booking' : 'Check In Now' }}
+              </button>
+              <button type="button" class="btn btn-outline-secondary" routerLink="/parking-locations">
+                Cancel
               </button>
             </div>
           </form>

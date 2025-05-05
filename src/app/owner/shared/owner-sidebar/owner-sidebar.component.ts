@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 
 @Component({
@@ -13,7 +13,10 @@ import { AuthService } from '../../../services/auth.service';
 export class OwnerSidebarComponent implements OnInit {
   userId: number | null = null;
   
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {}
   
   ngOnInit(): void {
     const currentUser = this.authService.getCurrentUser();
@@ -23,6 +26,17 @@ export class OwnerSidebarComponent implements OnInit {
   }
 
   logout(): void {
-    this.authService.logout().subscribe();
+    this.authService.logout().subscribe({
+      next: () => {
+        console.log('Logout successful, redirecting to home page');
+        // Redirect to home page after successful logout
+        this.router.navigate(['/']);
+      },
+      error: (error) => {
+        console.error('Error during logout:', error);
+        // Even on error, still redirect to home page
+        this.router.navigate(['/']);
+      }
+    });
   }
 } 

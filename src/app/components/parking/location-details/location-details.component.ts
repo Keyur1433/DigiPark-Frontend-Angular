@@ -125,9 +125,14 @@ import { AuthService } from '../../../services/auth.service';
                       </div>
                     </div>
                     
-                    <button (click)="bookParking()" class="btn btn-primary w-100 mb-2" [disabled]="!location.is_active">
-                      {{ location.is_active ? 'Book Parking' : 'Currently Unavailable' }}
-                    </button>
+                    <div class="d-grid gap-2">
+                      <button (click)="bookParking()" class="btn btn-primary" [disabled]="!location.is_active">
+                        {{ location.is_active ? 'Check In' : 'Currently Unavailable' }}
+                      </button>
+                      <button (click)="advancedBooking()" class="btn btn-outline-primary" [disabled]="!location.is_active">
+                        Advanced Booking
+                      </button>
+                    </div>
                     <small *ngIf="!location.is_active" class="text-danger d-block text-center">
                       This parking location is currently inactive
                     </small>
@@ -292,6 +297,23 @@ export class LocationDetailsComponent implements OnInit {
       const redirectUrl = `/parking-locations/${this.locationId}/booking`;
       this.router.navigate(['/login'], {
         queryParams: { redirect: redirectUrl }
+      });
+    }
+  }
+
+  advancedBooking(): void {
+    // Check if user is logged in
+    if (this.authService.isLoggedIn()) {
+      // User is logged in, navigate to advanced booking page
+      // We'll use the same route for now, but can be updated later
+      this.router.navigate(['/parking-locations', this.locationId, 'booking'], {
+        queryParams: { type: 'advanced' }
+      });
+    } else {
+      // Not logged in, redirect to login with return URL
+      const redirectUrl = `/parking-locations/${this.locationId}/booking`;
+      this.router.navigate(['/login'], {
+        queryParams: { redirect: redirectUrl, type: 'advanced' }
       });
     }
   }

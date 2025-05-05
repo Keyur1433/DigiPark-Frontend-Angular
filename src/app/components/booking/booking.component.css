@@ -32,6 +32,13 @@
   box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
+.form-select:disabled,
+.form-select option:disabled {
+  color: #adb5bd !important;
+  background-color: #f8f9fa !important;
+  cursor: not-allowed;
+}
+
 .btn {
   border-radius: 6px;
   padding: 10px 20px;
@@ -66,28 +73,23 @@
 
 .slot-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
 }
 
 .slot {
-  padding: 10px;
+  border: 2px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 1rem;
   text-align: center;
-  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid #ddd;
-  min-height: 60px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  user-select: none;
 }
 
 .slot-label {
-  font-weight: bold;
-  margin-bottom: 5px;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .slot-type {
@@ -96,39 +98,37 @@
 }
 
 .slot-available {
-  background-color: #ffffff;
-  border: 1px solid #ddd;
+  background-color: #e9ecef;
+  border-color: #ced4da;
 }
 
 .slot-available:hover {
-  background-color: #f0f8ff;
-  border-color: #0d6efd;
+  background-color: #dee2e6;
+  border-color: #adb5bd;
 }
 
 .slot-selected {
-  background-color: #0d6efd;
-  color: white;
-  border-color: #0a58ca;
+  background-color: #cfe2ff;
+  border-color: #0d6efd;
 }
 
 .slot-occupied {
-  background-color: #e9ecef;
-  color: #6c757d;
+  background-color: #f8d7da;
+  border-color: #dc3545;
   cursor: not-allowed;
-  opacity: 0.7;
 }
 
 .slot-reserved {
   background-color: #fff3cd;
-  color: #664d03;
+  border-color: #ffc107;
   cursor: not-allowed;
-  border-color: #ffecb5;
 }
 
 .vehicle-type-header {
-  margin-top: 15px;
-  margin-bottom: 10px;
-  font-weight: bold;
+  font-weight: 500;
+  margin-top: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
 }
 
 .slot-info {
@@ -140,33 +140,33 @@
 
 .slot-legend {
   display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
 }
 
 .legend-color {
-  width: 20px;
-  height: 20px;
-  border-radius: 3px;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid #dee2e6;
 }
 
 .color-available {
-  background-color: #ffffff;
-  border: 1px solid #ddd;
+  background-color: #e9ecef;
 }
 
 .color-selected {
-  background-color: #0d6efd;
+  background-color: #cfe2ff;
 }
 
 .color-occupied {
-  background-color: #e9ecef;
+  background-color: #f8d7da;
 }
 
 .color-reserved {
@@ -174,9 +174,10 @@
 }
 
 .date-time-selector {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .date-time-selector > div {
@@ -202,4 +203,57 @@
   .slot-legend {
     flex-wrap: wrap;
   }
+}
+
+/* Custom styles for time selection dropdowns */
+select.form-select option[disabled] {
+  color: #adb5bd;
+  background-color: #f8f9fa;
+  font-style: italic;
+}
+
+.alert {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  border-color: #f5c2c7;
+  color: #842029;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border-color: #ffecb5;
+  color: #664d03;
+}
+
+.alert-success {
+  background-color: #d1e7dd;
+  border-color: #badbcc;
+  color: #0f5132;
+}
+
+.date-availability-card {
+  font-size: 0.85rem;
+  border: 1px solid #dee2e6;
+  box-shadow: none;
+}
+
+.date-availability-card .card-body {
+  padding: 0.75rem;
+}
+
+.date-availability-card h6 {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: #495057;
+}
+
+.date-availability-card .badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
 } 

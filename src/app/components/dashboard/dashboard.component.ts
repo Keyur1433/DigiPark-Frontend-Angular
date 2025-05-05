@@ -267,14 +267,27 @@ export class DashboardComponent implements OnInit {
         
         this.vehicles = vehicles;
         
-        // If we got bookings from the API, use those
-        if (bookings && bookings.length > 0) {
-          this.allBookings = bookings;
-          console.log('Using bookings from API');
+        // If we got bookings from the API, use those and clear cache if empty
+        if (bookings !== null && bookings !== undefined) {
+          this.allBookings = bookings.length > 0 ? bookings : [];
+          console.log('Using bookings from API:', this.allBookings.length);
+          
+          // If API returns empty array but we have cache, clear the cache
+          // This ensures we show the true backend state
+          if (bookings.length === 0 && cachedBookings.length > 0) {
+            console.log('API returned empty bookings array, clearing cache');
+            try {
+              localStorage.removeItem('bookings_cache');
+              localStorage.removeItem('recent_bookings');
+              localStorage.removeItem('all_processed_bookings');
+            } catch (e) {
+              console.error('Error clearing cached bookings:', e);
+            }
+          }
         }
-        // If no bookings from API but we have cached bookings, use those
+        // Only use cached bookings if API call failed (not just returned empty)
         else if (cachedBookings.length > 0) {
-          console.log('Using cached bookings from localStorage');
+          console.log('API call failed, using cached bookings from localStorage');
           this.allBookings = cachedBookings;
         }
         // Otherwise the allBookings array will be empty

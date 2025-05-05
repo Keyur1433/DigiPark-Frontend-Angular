@@ -99,10 +99,12 @@ export class AuthService {
           }
           
           // Fetch full user profile in the background
-          this.fetchCurrentUser().subscribe({
-            next: user => console.log('User profile fetched in background:', user?.id),
-            error: err => console.error('Background user fetch failed:', err)
-          });
+          setTimeout(() => {
+            this.fetchCurrentUser().subscribe({
+              next: user => console.log('User profile fetched in background:', user?.id),
+              error: err => console.error('Background user fetch failed:', err)
+            });
+          }, 100); // Short timeout to ensure HTTP interceptors are ready
         }
       } catch (e) {
         console.error('Error accessing localStorage:', e);
@@ -303,45 +305,48 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    // If we've checked recently, use our cached result
-    const now = Date.now();
-    if (now - this.lastTokenCheck < 1000 && this.inMemoryToken) {
+    // Check memory first (works in both browser and SSR)
+    if (this.inMemoryToken) {
       return this.inMemoryToken;
     }
     
-    this.lastTokenCheck = now;
-    
+    // For browser only - try localStorage
     if (this.isBrowser) {
       try {
-        const storedToken = localStorage.getItem('token');
-        if (storedToken) {
-          console.log('Token retrieved from localStorage');
-          this.inMemoryToken = storedToken;
-          return storedToken;
-        }
+        return localStorage.getItem('token');
       } catch (e) {
-        console.error('Error accessing token from localStorage:', e);
+        console.error('Error reading token from localStorage:', e);
+        return null;
       }
     }
     
-    return this.inMemoryToken;
+    return null;
   }
 
   /**
    * Check if user is currently logged in
    */
   isLoggedIn(): boolean {
-    const token = this.getToken();
-    const hasToken = !!token;
-    const hasUserInfo = !!this.getUserId();
-    console.log(`Auth check: hasToken=${hasToken}, hasUserInfo=${hasUserInfo}`);
-    
-    if (hasToken && !hasUserInfo) {
-      // We have a token but no user info, try to refresh
-      this.fetchCurrentUser().subscribe();
+    if (!this.isBrowser) {
+      // In SSR, use the authentication subject value
+      return this.isAuthenticatedSubject.value;
     }
     
-    return hasToken && hasUserInfo;
+    // In browser, check for token
+    try {
+      const token = this.getToken();
+      const isTokenValid = !!token;
+      
+      if (isTokenValid !== this.isAuthenticatedSubject.value) {
+        // Update the authenticated state to match token
+        this.isAuthenticatedSubject.next(isTokenValid);
+      }
+      
+      return isTokenValid;
+    } catch (e) {
+      console.error('Error in isLoggedIn:', e);
+      return false;
+    }
   }
 
   // Force a refresh of the authentication state
