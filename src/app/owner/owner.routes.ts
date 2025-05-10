@@ -39,6 +39,11 @@ export const OWNER_ROUTES: Routes = [
         title: 'Booking Management'
       },
       {
+        path: 'bookings/:bookingId',
+        loadComponent: () => import('./bookings/booking-details/booking-details.component').then(m => m.BookingDetailsComponent),
+        title: 'Booking Details'
+      },
+      {
         path: 'reports',
         loadComponent: () => import('./reports/owner-reports.component').then(m => m.OwnerReportsComponent),
         title: 'Reports & Analytics'

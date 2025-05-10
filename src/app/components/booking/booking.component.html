@@ -14,8 +14,37 @@
         </button>
       </div>
 
-      <!-- Error message -->
-      <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+      <!-- Custom debugging alert - only shown when there's a 'Failed to book parking' error message -->
+      <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert" *ngIf="errorMessage && errorMessage.includes('Failed to book parking')">
+        <strong>Booking Error!</strong> 
+        <p>There was an error with your booking request. Please check the following:</p>
+        <ul>
+          <li>Make sure you've selected a vehicle and slot</li>
+          <li>Confirm that the time slot is available</li>
+          <li>Check your network connection</li>
+        </ul>
+        <hr>
+        <details>
+          <summary>Technical Details (click to expand)</summary>
+          <div class="mt-2">
+            <p><strong>Selected Vehicle:</strong> {{ selectedVehicleId ? getSelectedVehicleName() : 'None' }}</p>
+            <p><strong>Selected Slot:</strong> {{ selectedSlotId ? getSelectedSlotNumber() : 'None' }}</p>
+            <p><strong>Date:</strong> {{ isAdvancedBooking ? (bookingDate || 'None') : 'Check-in booking' }}</p>
+            <p><strong>Time Range:</strong> {{ startTime || 'None' }} - {{ endTime || 'None' }}</p>
+            <p><strong>Duration:</strong> {{ durationHours }} hour(s)</p>
+          </div>
+        </details>
+        <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+      </div>
+
+      <!-- Booking Duration Alert - Static message shown for 30-minute validation errors -->
+      <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert" *ngIf="errorMessage && errorMessage.includes('Booking duration must be at least 30 minutes')">
+        Booking duration must be at least 30 minutes.
+        <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+      </div>
+
+      <!-- Error message for all other cases -->
+      <div *ngIf="errorMessage && !errorMessage.includes('Booking duration must be at least 30 minutes') && !errorMessage.includes('Failed to book parking')" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
         {{ errorMessage }}
         <button type="button" class="btn-close" (click)="errorMessage = null"></button>
       </div>
@@ -159,32 +188,19 @@
                 <!-- Duration selection - only for check-in -->
                 <div *ngIf="!isAdvancedBooking">
                   <label for="durationSelect" class="form-label">Duration</label>
-                  <select 
-                    class="form-select" 
-                    id="durationSelect" 
-                    [(ngModel)]="durationHours" 
-                    name="duration"
-                    required
-                    (ngModelChange)="onDurationChange()"
-                  >
-                    <option [ngValue]="0.5">30 minutes</option>
-                    <option [ngValue]="1">1 hour</option>
-                    <option [ngValue]="1.5">1.5 hours</option>
-                    <option [ngValue]="2">2 hours</option>
-                    <option [ngValue]="2.5">2.5 hours</option>
-                    <option [ngValue]="3">3 hours</option>
-                    <option [ngValue]="3.5">3.5 hours</option>
-                    <option [ngValue]="4">4 hours</option>
-                    <option [ngValue]="4.5">4.5 hours</option>
-                    <option [ngValue]="5">5 hours</option>
-                    <option [ngValue]="5.5">5.5 hours</option>
-                    <option [ngValue]="6">6 hours</option>
-                    <option [ngValue]="6.5">6.5 hours</option>
-                    <option [ngValue]="7">7 hours</option>
-                    <option [ngValue]="7.5">7.5 hours</option>
-                    <option [ngValue]="8">8 hours</option>
-                    <option [ngValue]="8.5">8.5 hours</option>
-                    <option [ngValue]="9">9 hours</option>
+                  <select id="durationSelect" class="form-select" [(ngModel)]="durationHours" (change)="onDurationChange()">
+                    <option [value]="0.5">30 minutes</option>
+                    <option [value]="1">1 hour</option>
+                    <option [value]="1.5">1.5 hours</option>
+                    <option [value]="2">2 hours</option>
+                    <option [value]="2.5">2.5 hours</option>
+                    <option [value]="3">3 hours</option>
+                    <option [value]="3.5">3.5 hours</option>
+                    <option [value]="4">4 hours</option>
+                    <option [value]="5">5 hours</option>
+                    <option [value]="6">6 hours</option>
+                    <option [value]="7">7 hours</option>
+                    <option [value]="8">8 hours</option>
                   </select>
                 </div>
               </div>

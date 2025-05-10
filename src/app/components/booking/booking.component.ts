@@ -312,23 +312,19 @@ export class BookingComponent implements OnInit {
     }
   }
 
-  // Handle changes in end time (for advanced booking)
+  // Calculate duration when end time changes (for advanced booking)
   onEndTimeChange(): void {
-    if (this.isAdvancedBooking && this.startTime && this.endTime) {
-      const [startHours, startMinutes] = this.startTime.split(':').map(Number);
-      const [endHours, endMinutes] = this.endTime.split(':').map(Number);
-      
-      const startDate = new Date();
-      startDate.setHours(startHours, startMinutes, 0, 0);
-      
-      const endDate = new Date();
-      endDate.setHours(endHours, endMinutes, 0, 0);
-      
+    if (this.startTime && this.endTime) {
       // Calculate duration in hours
-      const durationMs = endDate.getTime() - startDate.getTime();
-      this.durationHours = durationMs / (1000 * 60 * 60);
+      const start = new Date(`2023-01-01T${this.startTime}`);
+      const end = new Date(`2023-01-01T${this.endTime}`);
+      const diffMs = end.getTime() - start.getTime();
+      this.durationHours = diffMs / (1000 * 60 * 60);
       
-      if (this.selectedVehicle && this.bookingDate) {
+      console.log('Duration calculated:', this.durationHours);
+      
+      // If everything is selected, load available slots
+      if (this.selectedVehicleId && this.bookingDate) {
         this.loadAvailableSlots();
       }
     }
@@ -427,13 +423,119 @@ export class BookingComponent implements OnInit {
 
   // Book the parking slot
   bookParking(): void {
-    if (!this.isFormValid()) {
-      this.errorMessage = 'Please fill in all required fields.';
+    // Extended validation checks
+    console.log("Validating booking form...");
+    console.log("Selected vehicle:", this.selectedVehicleId);
+    console.log("Selected slot:", this.selectedSlotId);
+    console.log("Is advanced booking:", this.isAdvancedBooking);
+    
+    if (this.isAdvancedBooking) {
+      console.log("Date:", this.bookingDate);
+      console.log("Start time:", this.startTime);
+      console.log("End time:", this.endTime);
+    } else {
+      console.log("Duration hours:", this.durationHours);
+    }
+    
+    if (!this.selectedVehicleId) {
+      this.errorMessage = 'Please select a vehicle.';
       return;
     }
+    
+    if (!this.selectedSlotId) {
+      this.errorMessage = 'Please select a parking slot.';
+      return;
+    }
+    
+    if (this.isAdvancedBooking) {
+      if (!this.bookingDate) {
+        this.errorMessage = 'Please select a date.';
+        return;
+      }
+      
+      if (!this.startTime) {
+        this.errorMessage = 'Please select a start time.';
+        return;
+      }
+      
+      if (!this.endTime) {
+        this.errorMessage = 'Please select an end time.';
+        return;
+      }
+      
+      // Validate time difference
+      const start = new Date(`2023-01-01T${this.startTime}`);
+      const end = new Date(`2023-01-01T${this.endTime}`);
+      const diffMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+      
+      console.log(`Time difference: ${diffMinutes} minutes (${diffMinutes/60} hours)`);
+      
+      if (diffMinutes < 30) {
+        this.errorMessage = 'Booking duration must be at least 30 minutes.';
+        return;
+      }
+    } else {
+      if (!this.durationHours || this.durationHours < 0.5) {
+        this.errorMessage = 'Duration must be at least 30 minutes.';
+        return;
+      }
+    }
 
-    this.isBooking = true;
+    // Force a refresh of slot availability right before booking
+    console.log("Refreshing available slots before booking...");
+    
+    // For advanced booking, verify slot availability one more time
+    if (this.isAdvancedBooking && this.bookingDate && this.startTime && this.endTime && this.selectedVehicle) {
+      this.isBooking = true;
+      this.bookingService.getAvailableSlots(
+        Number(this.parkingLocationId),
+        this.bookingDate,
+        this.startTime,
+        this.endTime,
+        this.selectedVehicle.type
+      ).subscribe({
+        next: (response) => {
+          if (response && response.slots) {
+            // Check if our selected slot is still available
+            const slotStillAvailable = response.slots.find(
+              (slot: ParkingSlot) => slot.id === this.selectedSlotId && slot.is_available_for_time_range
+            );
+            
+            if (!slotStillAvailable) {
+              this.errorMessage = "The selected slot is no longer available. Please select another slot.";
+              this.isBooking = false;
+              // Refresh available slots
+              this.availableSlots = response.slots;
+              this.showSlotSelection = true;
+              this.selectedSlotId = null;
+              return;
+            }
+            
+            // If slot is still available, proceed with booking
+            this.proceedWithBooking();
+          } else {
+            this.errorMessage = 'No slots available for the selected time period.';
+            this.isBooking = false;
+          }
+        },
+        error: (error) => {
+          console.error('Error refreshing slots:', error);
+          // Still proceed with booking attempt, maybe the error is temporary
+          this.proceedWithBooking();
+        }
+      });
+    } else {
+      // For check-in booking, proceed directly
+      this.proceedWithBooking();
+    }
+  }
+
+  // Extract the booking logic to a separate method
+  private proceedWithBooking(): void {
     this.errorMessage = null;
+
+    // Log what type of booking we're creating
+    console.log(`Creating ${this.isAdvancedBooking ? 'advanced' : 'check-in'} booking`);
 
     const bookingData = this.isAdvancedBooking ? {
       parking_location_id: Number(this.parkingLocationId),
@@ -449,28 +551,73 @@ export class BookingComponent implements OnInit {
       duration_hours: this.durationHours
     };
 
+    console.log('Booking data being sent to service:', JSON.stringify(bookingData));
+
     const bookingMethod = this.isAdvancedBooking ? 
       this.bookingService.createAdvancedBooking(bookingData) :
       this.bookingService.createBooking(bookingData);
 
     bookingMethod.subscribe({
-      next: (response: { booking: { id: number } }) => {
+      next: (response: any) => {
+        console.log('Booking created successfully:', response);
         this.successMessage = 'Booking created successfully!';
-          this.isBooking = false;
-          
+        this.isBooking = false;
+        
         // Redirect to dashboard with success message
         setTimeout(() => {
           const userId = this.authService.getUserId();
           this.router.navigate(['/user', userId, 'dashboard'], {
-            queryParams: { booking_success: 'true', booking_id: response.booking.id }
+            queryParams: { booking_success: 'true', booking_id: response?.booking?.id || 'new' }
           });
         }, 1500);
       },
-      error: (error: { error: { message: string } }) => {
-        this.errorMessage = error.error.message || 'Failed to create booking. Please try again.';
-        this.isBooking = false;
+      error: (error: any) => {
+        this.handleBookingError(error);
       }
     });
+  }
+
+  // Extract error handling to a separate method
+  private handleBookingError(error: any): void {
+    console.error('Error creating booking:', error);
+    
+    // Extract the error message
+    let errorMsg = 'Failed to book parking. Please try again.';
+    if (error.error && error.error.message) {
+      errorMsg = error.error.message;
+    } else if (error.message) {
+      errorMsg = error.message;
+    }
+    
+    // Check for specific error conditions
+    if (error.status === 422) {
+      console.error("Validation error details:", error.error);
+      
+      // Handle Laravel validation errors which are usually in error.error.errors
+      if (error.error && error.error.errors) {
+        const validationErrors = error.error.errors;
+        console.error("Validation errors:", validationErrors);
+        
+        // Convert validation errors to readable message
+        const errorMessages = [];
+        for (const field in validationErrors) {
+          if (validationErrors.hasOwnProperty(field)) {
+            errorMessages.push(`${field}: ${validationErrors[field].join(', ')}`);
+          }
+        }
+        
+        if (errorMessages.length > 0) {
+          errorMsg = `Validation errors: ${errorMessages.join('; ')}`;
+        }
+      }
+    } else if (error.status === 0) {
+      errorMsg = 'Network error. Please check your internet connection.';
+    } else if (error.status === 500) {
+      errorMsg = 'Server error. Please try again later.';
+    }
+    
+    this.errorMessage = errorMsg;
+    this.isBooking = false;
   }
 
   // Handle date change for advanced booking

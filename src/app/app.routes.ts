@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuardFn } from './guards/auth.guard';
 import { publicGuardFn } from './guards/public.guard';
 import { OWNER_ROUTES } from './owner/owner.routes';
+import { ADMIN_ROUTES } from './admin/admin.routes';
 
 export const routes: Routes = [
   // Public routes first
@@ -66,6 +67,12 @@ export const routes: Routes = [
     canActivate: [authGuardFn],
     loadComponent: () => import('../app/components/bookings/all-bookings/all-bookings.component').then(m => m.AllBookingsComponent),
     title: 'All Bookings'
+  },
+  
+  // Admin Routes
+  {
+    path: 'admin',
+    children: ADMIN_ROUTES
   },
   
   ...OWNER_ROUTES,

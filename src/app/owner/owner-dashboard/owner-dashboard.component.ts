@@ -1,9 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
-import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { OwnerService, DashboardData, Booking } from '../../services/owner.service';
 import { AuthService } from '../../services/auth.service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-owner-dashboard',
@@ -19,10 +22,17 @@ export class OwnerDashboardComponent implements OnInit {
   currentDate = new Date().toLocaleDateString();
   userId: number | null = null;
   
+  // For booking details modal
+  selectedBooking: any = null;
+  isLoadingBookingDetails = false;
+  
   constructor(
     private ownerService: OwnerService,
     private route: ActivatedRoute,
-    private authService: AuthService
+    private authService: AuthService,
+    private modalService: NgbModal,
+    private http: HttpClient,
+    private toastr: ToastrService
   ) { }
 
   ngOnInit(): void {
@@ -68,6 +78,56 @@ export class OwnerDashboardComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  openBookingDetails(bookingId: number, modalRef: any) {
+    this.isLoadingBookingDetails = true;
+    this.selectedBooking = null;
+    
+    // Open the modal
+    const modalInstance = this.modalService.open(modalRef, { 
+      centered: true, 
+      size: 'lg', 
+      backdrop: 'static',
+      scrollable: true
+    });
+
+    // Load booking details
+    this.http.get(`${environment.apiUrl}/owner/bookings/${bookingId}`)
+      .subscribe({
+        next: (response: any) => {
+          console.log('Booking details loaded:', response);
+          this.selectedBooking = response.booking;
+          this.isLoadingBookingDetails = false;
+        },
+        error: (error) => {
+          console.error('Error loading booking details:', error);
+          this.isLoadingBookingDetails = false;
+          this.toastr.error('Failed to load booking details');
+          modalInstance.dismiss();
+        }
+      });
+  }
+
+  updateBookingStatus(bookingId: number, status: string): void {
+    this.http.post(`${environment.apiUrl}/owner/bookings/${bookingId}/update-status`, { status })
+      .subscribe({
+        next: (response: any) => {
+          this.toastr.success(response.message || 'Status updated successfully');
+          // Refresh booking details
+          this.http.get(`${environment.apiUrl}/owner/bookings/${bookingId}`)
+            .subscribe({
+              next: (response: any) => {
+                this.selectedBooking = response.booking;
+              }
+            });
+          // Refresh dashboard data to update statistics
+          this.loadDashboardData();
+        },
+        error: (error) => {
+          this.toastr.error(error.error?.message || 'Failed to update status');
+        }
+      });
   }
 
   getStatusClass(status: string): string {

@@ -1,5 +1,5 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
-import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError, of, switchMap, timer, interval } from 'rxjs';
 import { catchError, tap, retry, map, shareReplay } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
@@ -59,24 +59,120 @@ export class BookingService {
 
   // Create an immediate check-in booking
   createBooking(bookingData: BookingData): Observable<any> {
-    return this.http.post(`${this.apiUrl}/bookings`, {
+    console.log('Creating check-in booking with data:', bookingData);
+    
+    // Format the data exactly as expected by the API
+    const formattedData = {
       parking_location_id: Number(bookingData.parking_location_id),
       vehicle_id: Number(bookingData.vehicle_id),
       parking_slot_id: Number(bookingData.parking_slot_id),
       duration_hours: bookingData.duration_hours
+    };
+    
+    console.log(`Sending request to ${this.apiUrl}/bookings/check-in with data:`, JSON.stringify(formattedData));
+    
+    // Get auth token from localStorage if available
+    let token = '';
+    if (this.isBrowser) {
+      token = localStorage.getItem('access_token') || '';
+    }
+    
+    // Include auth token if available
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     });
+    
+    return this.http.post(`${this.apiUrl}/bookings/check-in`, formattedData, { headers })
+      .pipe(
+        tap(response => {
+          console.log('Check-in booking API response:', response);
+          console.log('Check-in booking created successfully:', response);
+        }),
+        catchError(error => {
+          console.error('Error creating check-in booking. Status:', error.status);
+          console.error('Error details:', error);
+          console.error('Error response body:', error.error);
+          
+          if (error.status === 401) {
+            console.error('Authentication error - token may be invalid or expired');
+          } else if (error.status === 403) {
+            console.error('Permission denied - user may not have booking privileges');
+          } else if (error.status === 422) {
+            console.error('Validation error - data format may be incorrect');
+            console.error('Validation errors:', error.error?.errors);
+          } else if (error.status === 0) {
+            console.error('Possible CORS issue or network error');
+          }
+          
+          return throwError(() => error);
+        })
+      );
   }
 
   // Create an advanced booking
   createAdvancedBooking(bookingData: BookingData): Observable<any> {
-    return this.http.post(`${this.apiUrl}/bookings/advance`, {
+    console.log('Creating advanced booking with data:', bookingData);
+    
+    // Format the data exactly as expected by the API
+    const formattedData = {
       parking_location_id: Number(bookingData.parking_location_id),
       vehicle_id: Number(bookingData.vehicle_id),
       parking_slot_id: Number(bookingData.parking_slot_id),
       date: bookingData.date,
       start_time: bookingData.start_time,
       end_time: bookingData.end_time
+    };
+    
+    console.log(`Sending request to ${this.apiUrl}/bookings/advance with data:`, JSON.stringify(formattedData));
+    
+    // Get auth token from localStorage if available
+    let token = '';
+    if (this.isBrowser) {
+      token = localStorage.getItem('access_token') || '';
+    }
+    
+    // Include auth token if available
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     });
+    
+    // Try different API endpoint formats
+    return this.attemptBookingRequest(formattedData, headers);
+  }
+
+  private attemptBookingRequest(formattedData: any, headers: HttpHeaders): Observable<any> {
+    console.log('Attempting booking request with headers:', headers);
+    
+    return this.http.post(`${this.apiUrl}/bookings/advance`, formattedData, { headers })
+      .pipe(
+        tap(response => {
+          console.log('Advanced booking API response:', response);
+          console.log('Advanced booking created successfully:', response);
+        }),
+        catchError(error => {
+          console.error('Error creating advanced booking. Status:', error.status);
+          console.error('Error details:', error);
+          console.error('Error response body:', error.error);
+          
+          if (error.status === 401) {
+            console.error('Authentication error - token may be invalid or expired');
+          } else if (error.status === 403) {
+            console.error('Permission denied - user may not have booking privileges');
+          } else if (error.status === 422) {
+            console.error('Validation error - data format may be incorrect');
+            console.error('Validation errors:', error.error?.errors);
+          } else if (error.status === 0) {
+            console.error('Possible CORS issue or network error');
+          }
+          
+          // Rethrow the error for component handling
+          return throwError(() => error);
+        })
+      );
   }
 
   getUserBookings(): Observable<any[]> {

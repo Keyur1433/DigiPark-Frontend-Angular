@@ -1,6 +1,6 @@
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap, of, map, catchError } from 'rxjs';
+import { BehaviorSubject, Observable, tap, of, map, catchError, throwError } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 
 const API_URL = 'http://127.0.0.1:8000/api';
@@ -387,6 +387,8 @@ export class AuthService {
         if (userId) {
           if (userRole === 'owner') {
             router.navigate(['/owner', userId, 'dashboard']);
+          } else if (userRole === 'admin') {
+            router.navigate(['/admin', userId, 'dashboard']);
           } else {
             router.navigate(['/user', userId, 'dashboard']);
           }
@@ -395,5 +397,45 @@ export class AuthService {
         }
       }
     }
+  }
+
+  // This method can be used to fetch the CSRF token
+  getCsrfToken(): Observable<any> {
+    return this.http.get<{token: string}>(`${API_URL}/csrf-token`, { withCredentials: true })
+      .pipe(
+        tap(response => {
+          console.log('CSRF token fetched:', response);
+          localStorage.setItem('csrf_token', response.token);
+        }),
+        catchError(error => {
+          console.error('Error fetching CSRF token:', error);
+          return throwError(() => error);
+        })
+      );
+  }
+
+  // Method to check authentication status with the server
+  checkAuthStatus(): Observable<any> {
+    return this.http.get<any>(`${API_URL}/auth/user`, { withCredentials: true })
+      .pipe(
+        tap(user => {
+          console.log('Auth status checked, user:', user);
+          if (user && user.id) {
+            this.isAuthenticatedSubject.next(true);
+            this.currentUserSubject.next(user);
+            localStorage.setItem('user_id', user.id.toString());
+            localStorage.setItem('user_role', user.role);
+          } else {
+            this.isAuthenticatedSubject.next(false);
+            this.currentUserSubject.next(null);
+          }
+        }),
+        catchError(error => {
+          console.error('Error checking auth status:', error);
+          this.isAuthenticatedSubject.next(false);
+          this.currentUserSubject.next(null);
+          return of(null);
+        })
+      );
   }
 } 

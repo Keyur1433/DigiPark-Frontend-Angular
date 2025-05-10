@@ -1,0 +1,57 @@
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #3c4b64;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-name {
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  background-color: #f8f9fa;
+}
+
+.admin-footer {
+  padding: 1rem 2rem;
+  border-top: 1px solid #e9ecef;
+  background-color: #ffffff;
+}
+
+.footer-content {
+  text-align: center;
+  color: #6c757d;
+  font-size: 0.875rem;
+} 

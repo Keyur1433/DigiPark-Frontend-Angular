@@ -1,0 +1,54 @@
+.locations-container {
+  padding: 1rem 0;
+}
+
+/* Table styles */
+.table th {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Badge styles */
+.badge {
+  font-weight: 500;
+  padding: 0.4rem 0.8rem;
+}
+
+/* Pagination styles */
+ngb-pagination ::ng-deep .page-link {
+  color: #3c4b64;
+  border-color: #dee2e6;
+  background-color: #fff;
+}
+
+ngb-pagination ::ng-deep .page-item.active .page-link {
+  background-color: #3c4b64;
+  border-color: #3c4b64;
+  color: #fff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table {
+    font-size: 0.875rem;
+  }
+  
+  .table td, .table th {
+    padding: 0.5rem;
+  }
+  
+  .btn-group .btn {
+    padding: 0.25rem 0.4rem;
+  }
+} 

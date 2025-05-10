@@ -1,0 +1,139 @@
+<div class="dashboard-container">
+  <!-- Loading and Error States -->
+  <div *ngIf="isLoading" class="text-center p-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading dashboard data...</p>
+  </div>
+
+  <div *ngIf="error && !isLoading" class="alert alert-danger" role="alert">
+    {{ error }}
+    <button (click)="refreshData()" class="btn btn-sm btn-outline-danger ms-3">Retry</button>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="dashboardData && !isLoading" class="dashboard-content">
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card stat-card bg-primary text-white">
+          <div class="card-body">
+            <h5 class="card-title">Total Users</h5>
+            <p class="card-text display-4">{{ dashboardData.statistics.total_users }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card stat-card bg-success text-white">
+          <div class="card-body">
+            <h5 class="card-title">Total Owners</h5>
+            <p class="card-text display-4">{{ dashboardData.statistics.total_owners }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card stat-card bg-info text-white">
+          <div class="card-body">
+            <h5 class="card-title">Parking Locations</h5>
+            <p class="card-text display-4">{{ dashboardData.statistics.total_parking_locations }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card stat-card bg-warning text-dark">
+          <div class="card-body">
+            <h5 class="card-title">Total Revenue</h5>
+            <p class="card-text display-4">{{ formatCurrency(dashboardData.statistics.total_revenue) }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Booking Statistics -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Booking Statistics</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-3">
+                <div class="booking-stat">
+                  <h6>Total Bookings</h6>
+                  <p class="h4">{{ dashboardData.statistics.total_bookings }}</p>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="booking-stat">
+                  <h6>Active Bookings</h6>
+                  <p class="h4 text-primary">{{ dashboardData.statistics.active_bookings }}</p>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="booking-stat">
+                  <h6>Completed Bookings</h6>
+                  <p class="h4 text-success">{{ dashboardData.statistics.completed_bookings }}</p>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="booking-stat">
+                  <h6>Cancelled Bookings</h6>
+                  <p class="h4 text-danger">{{ dashboardData.statistics.cancelled_bookings }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Bookings Table -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Recent Bookings</h5>
+            <button (click)="refreshData()" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Parking Location</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let booking of dashboardData.recent_bookings">
+                    <td>{{ booking.id }}</td>
+                    <td>{{ booking.user.first_name }} {{ booking.user.last_name }}</td>
+                    <td>{{ booking.parking_location.name }}</td>
+                    <td>{{ formatCurrency(booking.amount) }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="getBookingStatusClass(booking.status)">
+                        {{ booking.status | titlecase }}
+                      </span>
+                    </td>
+                    <td>{{ booking.check_in_time | date:'medium' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-footer text-center">
+            <a [routerLink]="['../bookings']" class="btn btn-sm btn-primary">View All Bookings</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

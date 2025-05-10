@@ -203,9 +203,9 @@
                 </td>
                 <td>{{ formatCurrency(booking.amount) }}</td>
                 <td>
-                  <a [routerLink]="['/owner', userId, 'bookings', booking.id]" class="btn btn-sm btn-info">
+                  <button class="btn btn-sm btn-info" (click)="openBookingDetails(booking.id, bookingDetailsModal)">
                     <i class="fas fa-eye"></i> View
-                  </a>
+                  </button>
                 </td>
               </tr>
               <tr *ngIf="dashboardData.recent_bookings.length === 0">
@@ -217,4 +217,131 @@
       </div>
     </div>
   </div>
-</div> 
+</div>
+
+<!-- Booking Details Modal -->
+<ng-template #bookingDetailsModal let-modal>
+  <div class="modal-header bg-primary text-white">
+    <h5 class="modal-title">
+      <i class="fas fa-ticket-alt me-2"></i>
+      Booking Details
+      <span *ngIf="selectedBooking" class="ms-2">#{{ selectedBooking.id }}</span>
+    </h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <!-- Loading state -->
+    <div *ngIf="isLoadingBookingDetails" class="text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3 text-muted">Loading booking details...</p>
+    </div>
+
+    <!-- Booking details content -->
+    <div *ngIf="!isLoadingBookingDetails && selectedBooking" class="booking-details">
+      <!-- Status badge -->
+      <div class="text-end mb-3">
+        <span class="badge rounded-pill" [ngClass]="getStatusClass(selectedBooking.status)">
+          {{ selectedBooking.status | titlecase }}
+        </span>
+      </div>
+
+      <!-- User and Vehicle Info -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-light">
+              <h6 class="mb-0 text-primary">
+                <i class="fas fa-user me-2"></i>User Information
+              </h6>
+            </div>
+            <div class="card-body">
+              <p class="mb-2"><strong>Name:</strong> {{ selectedBooking.user.first_name }} {{ selectedBooking.user.last_name }}</p>
+              <p class="mb-2"><strong>Contact:</strong> {{ selectedBooking.user.contact_number }}</p>
+              <p class="mb-0"><strong>Email:</strong> {{ selectedBooking.user.email }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-light">
+              <h6 class="mb-0 text-primary">
+                <i class="fas fa-car me-2"></i>Vehicle Information
+              </h6>
+            </div>
+            <div class="card-body">
+              <p class="mb-2"><strong>Type:</strong> {{ selectedBooking.vehicle.type }}</p>
+              <p class="mb-2"><strong>Vehicle:</strong> {{ selectedBooking.vehicle.brand }} {{ selectedBooking.vehicle.model }}</p>
+              <p class="mb-0"><strong>Number Plate:</strong> {{ selectedBooking.vehicle.number_plate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parking and Booking Info -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-light">
+              <h6 class="mb-0 text-primary">
+                <i class="fas fa-parking me-2"></i>Parking Information
+              </h6>
+            </div>
+            <div class="card-body">
+              <p class="mb-2"><strong>Location:</strong> {{ selectedBooking.parking_location.name }}</p>
+              <p class="mb-2"><strong>Address:</strong> {{ selectedBooking.parking_location.address }}</p>
+              <p class="mb-0"><strong>Slot:</strong> {{ selectedBooking.parking_slot?.slot_number || 'N/A' }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-light">
+              <h6 class="mb-0 text-primary">
+                <i class="fas fa-clock me-2"></i>Booking Information
+              </h6>
+            </div>
+            <div class="card-body">
+              <p class="mb-2"><strong>Check-in:</strong> {{ formatDate(selectedBooking.check_in_time) }}</p>
+              <p class="mb-2"><strong>Check-out:</strong> {{ formatDate(selectedBooking.check_out_time) }}</p>
+              <p class="mb-0"><strong>Amount:</strong> {{ formatCurrency(selectedBooking.amount) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="row mt-4" *ngIf="selectedBooking.status === 'upcoming' || selectedBooking.status === 'checked_in'">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-light">
+              <h6 class="mb-0 text-primary">
+                <i class="fas fa-tasks me-2"></i>Actions
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="d-flex gap-2">
+                <button *ngIf="selectedBooking.status === 'upcoming'" class="btn btn-success" 
+                  (click)="updateBookingStatus(selectedBooking.id, 'checked_in')">
+                  <i class="fas fa-sign-in-alt me-2"></i> Check In
+                </button>
+                <button *ngIf="selectedBooking.status === 'checked_in'" class="btn btn-primary" 
+                  (click)="updateBookingStatus(selectedBooking.id, 'completed')">
+                  <i class="fas fa-sign-out-alt me-2"></i> Check Out
+                </button>
+                <button *ngIf="selectedBooking.status === 'upcoming'" class="btn btn-danger" 
+                  (click)="updateBookingStatus(selectedBooking.id, 'cancelled')">
+                  <i class="fas fa-times me-2"></i> Cancel Booking
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Close</button>
+  </div>
+</ng-template> 

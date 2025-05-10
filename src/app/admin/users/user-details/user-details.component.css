@@ -1,0 +1,78 @@
+.user-details-container {
+  padding: 1rem 0;
+}
+
+/* User profile card */
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.user-avatar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.avatar-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #3c4b64;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+/* Badge styles */
+.badge {
+  font-weight: 500;
+  padding: 0.4rem 0.8rem;
+}
+
+/* Tab content */
+.nav-tabs .nav-link {
+  color: #495057;
+  font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+  color: #3c4b64;
+  font-weight: 600;
+}
+
+/* Table styles */
+.table th {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .profile-info {
+    margin-bottom: 1.5rem;
+  }
+  
+  .table {
+    font-size: 0.875rem;
+  }
+  
+  .table td, .table th {
+    padding: 0.5rem;
+  }
+} 

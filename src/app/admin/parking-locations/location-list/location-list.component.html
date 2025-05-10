@@ -1,0 +1,135 @@
+<div class="locations-container">
+  <!-- Header Section -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">Parking Locations</h3>
+    <button class="btn btn-primary" [routerLink]="['../add-location']" *ngIf="false">
+      <i class="bi bi-plus-circle me-1"></i> Add New Location
+    </button>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <form [formGroup]="filterForm">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input 
+                type="text" 
+                class="form-control" 
+                placeholder="Search by name or address"
+                formControlName="search"
+              >
+            </div>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" formControlName="city">
+              <option value="">All Cities</option>
+              <option value="ahmedabad">Ahmedabad</option>
+              <option value="surat">Surat</option>
+              <option value="vadodara">Vadodara</option>
+              <option value="rajkot">Rajkot</option>
+            </select>
+          </div>
+          <div class="col-md-3 d-flex justify-content-end">
+            <button type="button" class="btn btn-outline-secondary me-2" (click)="clearFilters()">
+              <i class="bi bi-x-circle me-1"></i> Clear
+            </button>
+            <button type="button" class="btn btn-outline-primary" (click)="refreshData()">
+              <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center p-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading parking locations data...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !isLoading" class="alert alert-danger" role="alert">
+    {{ error }}
+    <button (click)="refreshData()" class="btn btn-sm btn-outline-danger ms-3">Retry</button>
+  </div>
+
+  <!-- Locations Table -->
+  <div *ngIf="!isLoading && !error && parkingLocations.length > 0" class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Address</th>
+              <th>City</th>
+              <th>Owner</th>
+              <th>Total Spots</th>
+              <th>Available</th>
+              <th>Price/Hour</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let location of parkingLocations">
+              <td>{{ location.id }}</td>
+              <td>{{ location.name }}</td>
+              <td>{{ location.address }}</td>
+              <td>{{ location.city }}</td>
+              <td>
+                <a [routerLink]="['../users', location.owner_id]">
+                  {{ location.owner.first_name }} {{ location.owner.last_name }}
+                </a>
+              </td>
+              <td>{{ location.total_spots }}</td>
+              <td>
+                <span class="badge rounded-pill" [ngClass]="getAvailabilityBadgeClass(location.available_spots)">
+                  {{ location.available_spots }} Spots
+                </span>
+              </td>
+              <td>₹{{ location.hourly_rate }}</td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <a [routerLink]="['../location-details', location.id]" class="btn btn-outline-primary" *ngIf="false">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a [routerLink]="['../edit-location', location.id]" class="btn btn-outline-secondary" *ngIf="false">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="card-footer d-flex justify-content-between align-items-center">
+      <div>
+        <span class="text-muted">Showing {{ parkingLocations.length }} of {{ totalItems }} locations</span>
+      </div>
+      <ngb-pagination
+        [collectionSize]="totalItems"
+        [(page)]="currentPage"
+        [pageSize]="pageSize"
+        [maxSize]="5"
+        [rotate]="true"
+        [boundaryLinks]="true"
+        (pageChange)="pageChanged($event)"
+      ></ngb-pagination>
+    </div>
+  </div>
+
+  <!-- No Locations Found -->
+  <div *ngIf="!isLoading && !error && parkingLocations.length === 0" class="alert alert-info" role="alert">
+    <i class="bi bi-info-circle me-2"></i> No parking locations found. Try clearing filters.
+  </div>
+</div> 

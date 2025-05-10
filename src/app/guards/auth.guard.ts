@@ -39,15 +39,18 @@ export const authGuardFn: CanActivateFn = (route: ActivatedRouteSnapshot, state:
     return true;
   }
   
-  const token = localStorage.getItem('token');
-  const userId = authService.getUserId();
-  console.log('Token exists:', !!token);
-  console.log('User ID exists:', !!userId);
-  
-  if (token && userId) {
-    return true;
-  }
-  
-  console.log('Authentication failed, redirecting to login');
-  return router.createUrlTree(['/login']);
+  // Check if user is authenticated through the service
+  return authService.isAuthenticated.pipe(
+    map(isAuthenticated => {
+      if (isAuthenticated) {
+        return true;
+      }
+      
+      // Store the attempted URL for redirecting after login
+      sessionStorage.setItem('redirectAfterLogin', state.url);
+      
+      console.log('Authentication failed, redirecting to login');
+      return router.createUrlTree(['/login']);
+    })
+  );
 }; 

@@ -1,0 +1,57 @@
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h2 class="logo">Parking Admin</h2>
+  </div>
+  
+  <nav class="sidebar-nav">
+    <ul class="nav-list">
+      <li class="nav-item">
+        <a 
+          [routerLink]="['/admin', userId, 'dashboard']" 
+          routerLinkActive="active" 
+          class="nav-link"
+        >
+          <i class="bi bi-speedometer2"></i>
+          Dashboard
+        </a>
+      </li>
+      <li class="nav-item">
+        <a 
+          [routerLink]="['/admin', userId, 'users']" 
+          routerLinkActive="active" 
+          class="nav-link"
+        >
+          <i class="bi bi-people"></i>
+          Users
+        </a>
+      </li>
+      <li class="nav-item">
+        <a 
+          [routerLink]="['/admin', userId, 'bookings']" 
+          routerLinkActive="active" 
+          class="nav-link"
+        >
+          <i class="bi bi-calendar-check"></i>
+          Bookings
+        </a>
+      </li>
+      <li class="nav-item">
+        <a 
+          [routerLink]="['/admin', userId, 'parking-locations']" 
+          routerLinkActive="active" 
+          class="nav-link"
+        >
+          <i class="bi bi-geo-alt"></i>
+          Parking Locations
+        </a>
+      </li>
+    </ul>
+  </nav>
+  
+  <div class="sidebar-footer">
+    <button (click)="logout()" class="logout-btn">
+      <i class="bi bi-box-arrow-right"></i>
+      Logout
+    </button>
+  </div>
+</div> 

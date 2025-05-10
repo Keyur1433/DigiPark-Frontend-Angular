@@ -1,0 +1,24 @@
+<div class="admin-layout">
+  <app-admin-sidebar [userId]="userId"></app-admin-sidebar>
+  
+  <div class="admin-content">
+    <header class="admin-header">
+      <div class="header-content">
+        <h1 class="page-title">{{ pageTitle }}</h1>
+        <div class="user-info">
+          <span class="user-name">{{ userName }}</span>
+        </div>
+      </div>
+    </header>
+    
+    <main class="main-content">
+      <router-outlet></router-outlet>
+    </main>
+    
+    <footer class="admin-footer">
+      <div class="footer-content">
+        <p>&copy; {{ currentYear }} Parking Management System. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+</div> 

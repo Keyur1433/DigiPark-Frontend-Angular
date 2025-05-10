@@ -38,7 +38,10 @@ export class OwnerBookingsComponent implements OnInit {
   statusFilter: string = 'all';
   searchTerm: string = '';
   currentPage: number = 1;
+  
+  // For booking details modal
   selectedBooking: any = null;
+  isLoadingBookingDetails: boolean = false;
   
   constructor(
     private route: ActivatedRoute,
@@ -152,24 +155,47 @@ export class OwnerBookingsComponent implements OnInit {
   }
   
   viewBookingDetails(booking: any, detailsModal: any): void {
-    this.isLoading = true;
+    this.isLoadingBookingDetails = true;
+    this.selectedBooking = null;
+    
+    // Open modal first for better UX
+    const modalRef = this.modalService.open(detailsModal, {
+      centered: true,
+      size: 'lg',
+      backdrop: 'static',
+      scrollable: true
+    });
+    
+    // Then load the data
     this.http.get(`${environment.apiUrl}/owner/bookings/${booking.id}`)
       .subscribe({
         next: (response: any) => {
+          console.log('Booking details loaded:', response);
           this.selectedBooking = response.booking;
-          this.isLoading = false;
-          this.modalService.open(detailsModal, {
-            centered: true,
-            size: 'lg',
-            backdrop: 'static'
-          });
+          this.isLoadingBookingDetails = false;
         },
         error: (error) => {
-          this.isLoading = false;
-          this.toastr.error('Failed to load booking details');
           console.error('Error loading booking details:', error);
+          this.isLoadingBookingDetails = false;
+          this.toastr.error('Failed to load booking details');
+          modalRef.dismiss();
         }
       });
+  }
+  
+  // Action handlers for booking status updates
+  checkInBooking(bookingId: number): void {
+    this.updateBookingStatus(bookingId, 'checked_in');
+  }
+  
+  checkOutBooking(bookingId: number): void {
+    this.updateBookingStatus(bookingId, 'completed');
+  }
+  
+  cancelBooking(bookingId: number): void {
+    if (confirm('Are you sure you want to cancel this booking?')) {
+      this.updateBookingStatus(bookingId, 'cancelled');
+    }
   }
   
   updateBookingStatus(bookingId: number, status: string): void {
@@ -177,6 +203,17 @@ export class OwnerBookingsComponent implements OnInit {
       .subscribe({
         next: (response: any) => {
           this.toastr.success(response.message || 'Status updated successfully');
+          
+          // Update the selected booking if it's currently displayed
+          if (this.selectedBooking && this.selectedBooking.id === bookingId) {
+            this.http.get(`${environment.apiUrl}/owner/bookings/${bookingId}`)
+              .subscribe({
+                next: (response: any) => {
+                  this.selectedBooking = response.booking;
+                }
+              });
+          }
+          
           // Refresh the bookings list
           this.loadBookings(this.currentPage);
         },
